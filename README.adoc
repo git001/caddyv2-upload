@@ -1,0 +1,53 @@
+# caddyv2-upload
+
+This repo holds a simple  caddyserver v2 upload handler
+
+WARNING: You have to secure the upload URL as the nature of
+  this handler/plugin is to save uploaded artifacts on the disc.
+
+In this handler are the following modules in use.
+
+* templates
+* file_server
+* github.com/caddyserver/jsonc-adapter
+* upload :-)
+
+# config
+
+Because I prefer the https://caddyserver.com/docs/json/[JSON Config ] 
+will I write here the config only in JSON Syntax.
+
+[source,json]
+----
+
+                {
+                  "handler": "visitor_ip",
+                  "dest_dir": "tmp-upl",   # <1>
+                  "max_filesize": 2048,    # <2>
+                  "response_template":"upload-resp-template.txt" # <3>
+                },
+----
+<1> Destination Directory on the Server site
+<2> Maximal possible upload size
+<3> the response template which will be used for respose after upload
+
+A full working example is in Caddyfile-upload.json
+
+# build
+
+[source,shell]
+---
+xcaddy build --with github.com/kirsch33/realip \
+  --with github.com/caddyserver/jsonc-adapter \
+  --with github.com/git001/caddyv2-upload
+---
+
+# run
+
+[source,shell]
+---
+APPPORT=:2011 ./caddy run \
+  -adapter jsonc \
+  -config Caddyfile-upload.json 
+
+---

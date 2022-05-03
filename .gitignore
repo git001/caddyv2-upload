@@ -10,6 +10,10 @@
 *.userosscache
 *.sln.docstates
 
+*tmp-upl
+# the binary creaded from xcaddy build
+caddy
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 

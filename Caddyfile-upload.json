@@ -1,0 +1,62 @@
+{
+  "admin": {
+    "listen": "127.0.0.1:8081"
+  },
+  "apps": {
+    "http": {
+      "grace_period": "30m",
+      "servers": {
+        "example": {
+          "listen": ["{env.APPPORT}"],
+          "routes": [
+            {
+              "match":[
+                {
+                  "method": ["GET"]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "templates"
+                },
+                {
+                  "handler": "file_server",
+                  "root": "templates"
+                }
+              ]
+            },
+            {
+              "match":[
+                {
+                  "method": ["POST"]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "templates"
+                },
+                {
+                  "handler": "upload",
+                  "dest_dir": "tmp-upl",
+                  "max_filesize": 2048,
+                  "response_template":"upload-resp-template.txt"
+                },
+                {
+                  "handler": "file_server",
+                  "root": "templates"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "logging": {
+    "logs": {
+      "default": {
+        "level": "DEBUG"
+      }
+    }
+  }
+}

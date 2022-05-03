@@ -1,0 +1,9 @@
+
+http.request.uri.path: {{placeholder "http.request.uri.path"}}
+
+http.request.uuid {{placeholder "http.request.uuid" }}
+http.request.host {{placeholder "http.request.host" }}
+
+http.upload.filename: {{placeholder "http.upload.filename"}}
+http.upload.filesize: {{placeholder "http.upload.filesize"}}
+
