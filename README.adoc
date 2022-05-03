@@ -31,7 +31,8 @@ will I write here the config only in JSON Syntax.
 <2> Maximal possible upload size
 <3> the response template which will be used for respose after upload
 
-A full working example is in Caddyfile-upload.json
+A full working example is in 
+`docker-files/opt/webroot/config/Caddyfile-upload.json`
 
 # build
 
@@ -44,10 +45,28 @@ xcaddy build --with github.com/kirsch33/realip \
 
 # run
 
+## cli
+
 [source,shell]
 ---
 APPPORT=:2011 ./caddy run \
   -adapter jsonc \
   -config Caddyfile-upload.json 
+---
 
+## docker
+
+You can get this image from docker hub
+
+The default listen port is defined with this variable
+
+`APPPORT=:2011`
+
+https://hub.docker.com/r/me2digital/caddyv2-upload
+
+[source,shell]
+---
+podman run --rm docker.io/me2digital/caddyv2-upload:0.1
+# or 
+docker run --rm docker.io/me2digital/caddyv2-upload:0.1
 ---

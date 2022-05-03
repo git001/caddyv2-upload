@@ -36,6 +36,14 @@
                   "handler": "templates"
                 },
                 {
+                  "handler": "headers",
+                  "response": {
+                    "set": {
+                      "Content-Type": ["text/plain; charset=utf-8"]
+                    }
+                  }
+                },
+                {
                   "handler": "upload",
                   "dest_dir": "tmp-upl",
                   "max_filesize": 2048,
@@ -56,6 +64,14 @@
     "logs": {
       "default": {
         "level": "DEBUG"
+      },
+      "myaccesslogger": {
+        "writer": {
+          "output": "stdout"
+        },
+        "encoder": {
+          "format": "json"
+        }
       }
     }
   }
