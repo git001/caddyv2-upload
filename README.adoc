@@ -21,7 +21,7 @@ will I write here the config only in JSON Syntax.
 ----
 
                 {
-                  "handler": "visitor_ip",
+                  "handler": "upload",
                   "dest_dir": "tmp-upl",   # <1>
                   "max_filesize": 2048,    # <2>
                   "response_template":"upload-resp-template.txt" # <3>
