@@ -12,6 +12,8 @@
       action="{{placeholder "http.request.scheme"}}://{{placeholder "http.request.hostport" }}{{placeholder "http.request.orig_uri"}}"
       method="post"
     >
+    Maxfilesize is: {{ placeholder "http.upload.max_filesize"}} &nbsp; Bytes
+    <br>
       <input type="file" name="myFile" />
       <input type="submit" value="upload" />
     </form>

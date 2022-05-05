@@ -25,6 +25,8 @@ type Upload struct {
 	DestDir          string `json:"dest_dir,omitempty"`
 	MaxFilesize      int64  `json:"max_filesize,omitempty"`
 	ResponseTemplate string `json:"response_template,omitempty"`
+	NotifyURL        string `json:"notify_url,omitempty"`
+	NotifyMethod     string `json:"notify_method,omitempty"`
 
 	ctx    caddy.Context
 	logger *zap.Logger
@@ -65,7 +67,9 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 	u.logger.Info("Current Config",
 		zap.String("Destinaton Directory (dest_dir)", u.DestDir),
 		zap.Int64("Max filesize in bytes (max_filesize)", u.MaxFilesize),
-		zap.String("Response Template (response_template)", u.ResponseTemplate))
+		zap.String("Response Template (response_template)", u.ResponseTemplate),
+		zap.String("Notify URL (notify_url)", u.NotifyURL),
+	)
 
 	return nil
 }
@@ -85,8 +89,11 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 	if !requuiderr {
 		requuid = "0"
 		u.logger.Error("http.request.uuid",
-			zap.Bool("requuiderr", requuiderr))
+			zap.Bool("requuiderr", requuiderr),
+			zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
 	}
+
+	repl.Set("http.upload.max_filesize", u.MaxFilesize)
 
 	r.Body = http.MaxBytesReader(w, r.Body, u.MaxFilesize)
 	if max_size_err := r.ParseMultipartForm(u.MaxFilesize); max_size_err != nil {
@@ -94,7 +101,8 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 			zap.String("Request uuid", requuid),
 			zap.String("message", "The uploaded file is too big. Please choose an file that's less than MaxFilesize."),
 			zap.Int64("MaxFilesize in Bytes", u.MaxFilesize),
-			zap.Error(max_size_err))
+			zap.Error(max_size_err),
+			zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
 		return caddyhttp.Error(http.StatusRequestEntityTooLarge, max_size_err)
 	}
 
@@ -106,7 +114,8 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 		u.logger.Error("FormFile Error",
 			zap.String("Request uuid", requuid),
 			zap.String("message", "Error Retrieving the File"),
-			zap.Error(ff_err))
+			zap.Error(ff_err),
+			zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
 		return caddyhttp.Error(http.StatusInternalServerError, ff_err)
 	}
 	defer file.Close()
@@ -119,7 +128,8 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 		u.logger.Error("TempFile Error",
 			zap.String("Request uuid", requuid),
 			zap.String("message", "Error at TempFile"),
-			zap.Error(tmpf_err))
+			zap.Error(tmpf_err),
+			zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
 		return caddyhttp.Error(http.StatusInternalServerError, tmpf_err)
 	}
 	defer tempFile.Close()
@@ -131,7 +141,8 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 		u.logger.Error("ReadAll Error",
 			zap.String("Request uuid", requuid),
 			zap.String("message", "Error at ReadAll"),
-			zap.Error(io_err))
+			zap.Error(io_err),
+			zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
 		return caddyhttp.Error(http.StatusInternalServerError, io_err)
 	}
 	// write this byte array to our temporary file
@@ -141,7 +152,8 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 		zap.String("Request uuid", requuid),
 		zap.String("Uploaded File", handler.Filename),
 		zap.Int64("File Size", handler.Size),
-		zap.Any("MIME Header", handler.Header))
+		zap.Any("MIME Header", handler.Header),
+		zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
 
 	repl.Set("http.upload.filename", handler.Filename)
 	repl.Set("http.upload.filesize", handler.Size)
@@ -150,6 +162,9 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 		r.URL.Path = "/" + u.ResponseTemplate
 	}
 
+	if u.NotifyURL != "" {
+		u.SendNotify()
+	}
 	return next.ServeHTTP(w, r)
 }
 
