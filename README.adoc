@@ -47,15 +47,15 @@ Here a example Caddyfile
 {
 	order upload before file_server
 }
-
-:8888 {
+#APPPORT set from env APPPORT=:8888
+{$APPPORT} {
 	root * /var/test
 
 	file_server /var/test/* {
 		browse /var/test/upload_index.htm
 	}
-
-	upload {
+  @mypost method POST
+	upload @mypost {
 		dest_dir /var/test/tmp_upload
 		max_filesize 4MB
 	}
@@ -89,7 +89,7 @@ APPPORT=:2011 ./caddy run \
 
 You can get this image from docker hub
 
-The default listen port is defined with this variable
+The default listen port must be defined with this variable
 
 `APPPORT=:2011`
 
@@ -97,7 +97,10 @@ https://hub.docker.com/r/me2digital/caddyv2-upload
 
 [source,shell]
 ---
-podman run --rm docker.io/me2digital/caddyv2-upload:0.1
+podman run --rm --network host --name caddy-test \
+  --env APPPORT=:8888 -it \
+  docker.io/me2digital/caddyv2-upload:latest
 # or 
-docker run --rm docker.io/me2digital/caddyv2-upload:0.1
+docker run --name caddy-test --rm \
+  docker.io/me2digital/caddyv2-upload:latest
 ---

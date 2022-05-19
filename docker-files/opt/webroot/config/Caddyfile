@@ -2,16 +2,17 @@
 	order upload before file_server
 }
 
-:8888 {
-	root * /var/test
+{$APPPORT} {
+	root .
 
-	file_server /var/test/* {
-		browse /var/test/upload_index.htm
-	}
+	file_server browse
+    templates
 
-	upload {
-		dest_dir /var/test/tmp_upload
+    @mypost method POST
+	upload @mypost {
+		dest_dir tmp_upload
 		max_filesize 4MB
+        response_template templates/upload-resp-template.txt
 	}
 
 	log {

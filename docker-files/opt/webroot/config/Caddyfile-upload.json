@@ -8,7 +8,53 @@
       "servers": {
         "example": {
           "listen": ["{env.APPPORT}"],
+          "logs": {
+            "default_logger_name": "myaccesslogger"
+          },
           "routes": [
+            {
+              "match":[
+                {
+                  "method": ["GET"],
+                  "path": ["/print-headers-template.txt"]
+                  
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "templates"
+                },
+                {
+                  "handler": "headers",
+                  "response": {
+                    "set": {
+                      "Content-Type": ["text/plain; charset=utf-8"]
+                    }
+                  }
+                },
+                {
+                  "handler": "file_server",
+                  "root": "templates"
+                }
+              ]
+            },
+            {
+              "match":[
+                {
+                  "method": ["GET"],
+                  "path": ["/upload-template.html"]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "templates"
+                },
+                {
+                  "handler": "file_server",
+                  "root": "templates"
+                }
+              ]
+            },
             {
               "match":[
                 {
@@ -21,7 +67,9 @@
                 },
                 {
                   "handler": "file_server",
-                  "root": "templates"
+                  "browse": 
+                    {
+                    }
                 }
               ]
             },
@@ -46,7 +94,7 @@
                 {
                   "handler": "upload",
                   "dest_dir": "tmp-upl",
-                  "max_filesize": 2048,
+                  "max_filesize": "1MB",
                   "response_template":"upload-resp-template.txt"
                 },
                 {
@@ -63,7 +111,7 @@
   "logging": {
     "logs": {
       "default": {
-        "level": "DEBUG"
+        "level": "INFO"
       },
       "myaccesslogger": {
         "writer": {
