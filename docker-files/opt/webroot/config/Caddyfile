@@ -10,7 +10,7 @@
 
     @mypost method POST
 	upload @mypost {
-		dest_dir tmp_upload
+		dest_dir tmp-upl
 		max_filesize 4MB
         response_template templates/upload-resp-template.txt
 	}

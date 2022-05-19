@@ -1,6 +1,6 @@
 # caddyv2-upload
 
-This repo holds a simple  caddyserver v2 upload handler
+This repo holds a simple caddyserver v2 upload handler
 
 WARNING: You have to secure the upload URL as the nature of
   this handler/plugin is to save uploaded artifacts on the disc.
@@ -14,12 +14,29 @@ In this handler are the following modules in use.
 
 # config
 
-**max_size** is the maximum size in bytes allowed for the upload.
+## Parameters
+
+[cols="2,6",options=header]
+|===
+|Name
+|Description
+
+|**dest_dir**
+|The directory in which the files will be uploaded
+
+|**response_template**
+|The response template after a upload was successfully
+
+|**max_size**
+|is the maximum size in bytes allowed for the upload.
   It accepts all size values supported by https://pkg.go.dev/github.com/dustin/go-humanize#pkg-constants[go-humanize]. Reads of 
   more bytes will return an error with HTTP status 413.
+|===
+
+## JSON
 
 Because I prefer the https://caddyserver.com/docs/json/[JSON Config ] 
-will I write here the config only in JSON Syntax.
+will I write here the config in JSON Syntax.
 
 [source,json]
 ----
@@ -104,3 +121,50 @@ podman run --rm --network host --name caddy-test \
 docker run --name caddy-test --rm \
   docker.io/me2digital/caddyv2-upload:latest
 ---
+
+# example cli
+
+When you run the Image with port 8888 can you use curl or any other
+tool to post (upload) files
+
+It's not necessary to use `-X POST` as written in this Blog post
+https://daniel.haxx.se/blog/2015/09/11/unnecessary-use-of-curl-x/[UNNECESSARY USE OF CURL -X]
+
+
+Here a example call with curl
+
+[source,shell]
+---
+curl -v --form myFile=@README.adoc http://localhost:8888/templates/upload-template.html
+*   Trying 127.0.0.1:8888...
+* TCP_NODELAY set
+* Connected to localhost (127.0.0.1) port 8888 (#0)
+> POST /templates/upload-template.html HTTP/1.1
+> Host: localhost:8888
+> User-Agent: curl/7.68.0
+> Accept: */*
+> Content-Length: 2492
+> Content-Type: multipart/form-data; boundary=------------------------58b770bc61c0e691
+> Expect: 100-continue
+> 
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 100 Continue
+* We are completely uploaded and fine
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 200 OK
+< Accept-Ranges: bytes
+< Content-Length: 299
+< Etag: "rbb1gx8b"
+< Last-Modified: Tue, 03 May 2022 11:34:09 GMT
+< Server: Caddy
+< Date: Thu, 19 May 2022 21:45:07 GMT
+< 
+
+http.request.uri.path: {{placeholder "http.request.uri.path"}}
+
+http.request.uuid {{placeholder "http.request.uuid" }}
+http.request.host {{placeholder "http.request.host" }}
+
+http.upload.filename: {{placeholder "http.upload.filename"}}
+http.upload.filesize: {{placeholder "http.upload.filesize"}}
+----
