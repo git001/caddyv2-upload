@@ -28,6 +28,8 @@ type Upload struct {
 	NotifyURL        string `json:"notify_url,omitempty"`
 	NotifyMethod     string `json:"notify_method,omitempty"`
 
+	// TODO: Handle notify Body
+
 	ctx    caddy.Context
 	logger *zap.Logger
 }
@@ -163,14 +165,23 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 	}
 
 	if u.NotifyURL != "" {
-		u.SendNotify()
+		errNotify := u.SendNotify()
+
+		if errNotify != nil {
+			u.logger.Error("Notify Error",
+				zap.Error(errNotify),
+			)
+		}
 	}
+
 	return next.ServeHTTP(w, r)
 }
 
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler.
 // TODO: make Caddyfile config robust
 func (u *Upload) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+	fmt.Printf("UnmarshalCaddyfile: %+v \n", d)
+
 	for d.Next() {
 		if !d.Args(&u.DestDir) {
 			return d.ArgErr()
