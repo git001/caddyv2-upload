@@ -5,12 +5,12 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"strconv"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
+	"github.com/dustin/go-humanize"
 	"go.uber.org/zap"
 )
 
@@ -27,6 +27,11 @@ type Upload struct {
 	ResponseTemplate string `json:"response_template,omitempty"`
 	NotifyURL        string `json:"notify_url,omitempty"`
 	NotifyMethod     string `json:"notify_method,omitempty"`
+
+	MyTlsSetting struct {
+		InsecureSkipVerify bool   `json:"insecure,omitempty"`
+		CAPath             string `json:"capath,omitempty"`
+	}
 
 	// TODO: Handle notify Body
 
@@ -53,11 +58,6 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 		return fmt.Errorf("no Destinaton Directory specified (dest_dir)")
 	}
 
-	if u.ResponseTemplate == "" {
-		u.logger.Warn("Provision",
-			zap.String("msg", "no ResponseTemplate specified (response_template)"))
-	}
-
 	mdall_err := os.MkdirAll(u.DestDir, 0755)
 	if mdall_err != nil {
 		u.logger.Error("Provision",
@@ -66,11 +66,25 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 		return mdall_err
 	}
 
+	if u.ResponseTemplate == "" {
+		u.logger.Warn("Provision",
+			zap.String("msg", "no ResponseTemplate specified (response_template), using the defualt one"),
+		)
+		u.ResponseTemplate = "upload-resp-template.txt"
+	}
+
+	if u.NotifyURL != "" && u.NotifyMethod == "" {
+		u.NotifyMethod = "GET"
+	}
+
 	u.logger.Info("Current Config",
-		zap.String("Destinaton Directory (dest_dir)", u.DestDir),
-		zap.Int64("Max filesize in bytes (max_filesize)", u.MaxFilesize),
-		zap.String("Response Template (response_template)", u.ResponseTemplate),
-		zap.String("Notify URL (notify_url)", u.NotifyURL),
+		zap.String("dest_dir", u.DestDir),
+		zap.Int64("max_filesize", u.MaxFilesize),
+		zap.String("response_template", u.ResponseTemplate),
+		zap.String("notify_method", u.NotifyMethod),
+		zap.String("notify_url", u.NotifyURL),
+		zap.String("capath", u.MyTlsSetting.CAPath),
+		zap.Bool("insecure", u.MyTlsSetting.InsecureSkipVerify),
 	)
 
 	return nil
@@ -102,7 +116,7 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 		u.logger.Error("ServeHTTP",
 			zap.String("Request uuid", requuid),
 			zap.String("message", "The uploaded file is too big. Please choose an file that's less than MaxFilesize."),
-			zap.Int64("MaxFilesize in Bytes", u.MaxFilesize),
+			zap.String("MaxFilesize", humanize.Bytes(uint64(u.MaxFilesize))),
 			zap.Error(max_size_err),
 			zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
 		return caddyhttp.Error(http.StatusRequestEntityTooLarge, max_size_err)
@@ -180,27 +194,63 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler.
 // TODO: make Caddyfile config robust
 func (u *Upload) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
-	fmt.Printf("UnmarshalCaddyfile: %+v \n", d)
 
 	for d.Next() {
-		if !d.Args(&u.DestDir) {
-			return d.ArgErr()
-		}
+		for d.NextBlock(0) {
+			switch d.Val() {
 
-		if !d.NextArg() {
-			return d.ArgErr()
+			case "dest_dir":
+				if !d.Args(&u.DestDir) {
+					return d.ArgErr()
+				}
+			case "max_filesize":
+				var sizeStr string
+				if !d.AllArgs(&sizeStr) {
+					return d.ArgErr()
+				}
+				size, err := humanize.ParseBytes(sizeStr)
+				if err != nil {
+					return d.Errf("parsing max_size: %v", err)
+				}
+				u.MaxFilesize = int64(size)
+			case "response_template":
+				if !d.Args(&u.ResponseTemplate) {
+					return d.ArgErr()
+				}
+			case "notify_url":
+				if !d.Args(&u.NotifyURL) {
+					return d.ArgErr()
+				}
+			case "notify_method":
+				if !d.Args(&u.NotifyMethod) {
+					return d.ArgErr()
+				}
+			case "insecure":
+				if !d.NextArg() {
+					return d.ArgErr()
+				}
+				u.MyTlsSetting.InsecureSkipVerify = true
+			case "capath":
+				if !d.Args(&u.MyTlsSetting.CAPath) {
+					return d.ArgErr()
+				}
+			default:
+				return d.Errf("unrecognized servers option '%s'", d.Val())
+			}
 		}
-
-		MaxFilesize, err := strconv.ParseInt(d.Val(), 10, 64)
-		if err != nil {
-			return d.Errf("bad max file size number '%s': %v", d.Val(), err)
-		}
-		u.MaxFilesize = MaxFilesize
 	}
 	return nil
 }
 
-// parseCaddyfile unmarshals tokens from h into a new Middleware.
+// parseCaddyfile parses the upload directive. It enables the upload
+// of a file:
+//
+//    upload {
+//        dest_dir          <destination directory>
+//        max_filesize      <size>
+//        response_template [<path to a response template>]
+//    }
+//
 func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
 	var u Upload
 	err := u.UnmarshalCaddyfile(h.Dispenser)

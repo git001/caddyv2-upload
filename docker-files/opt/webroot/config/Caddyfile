@@ -1,0 +1,20 @@
+{
+	order upload before file_server
+}
+
+:8888 {
+	root * /var/test
+
+	file_server /var/test/* {
+		browse /var/test/upload_index.htm
+	}
+
+	upload {
+		dest_dir /var/test/tmp_upload
+		max_filesize 4MB
+	}
+
+	log {
+		output file access.log
+	}
+}

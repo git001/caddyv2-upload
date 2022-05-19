@@ -14,6 +14,10 @@ In this handler are the following modules in use.
 
 # config
 
+**max_size** is the maximum size in bytes allowed for the upload.
+  It accepts all size values supported by https://pkg.go.dev/github.com/dustin/go-humanize#pkg-constants[go-humanize]. Reads of 
+  more bytes will return an error with HTTP status 413.
+
 Because I prefer the https://caddyserver.com/docs/json/[JSON Config ] 
 will I write here the config only in JSON Syntax.
 
@@ -34,6 +38,33 @@ will I write here the config only in JSON Syntax.
 A full working example is in 
 `docker-files/opt/webroot/config/Caddyfile-upload.json`
 
+## Caddyfile
+
+Here a example Caddyfile
+
+[source]
+----
+{
+	order upload before file_server
+}
+
+:8888 {
+	root * /var/test
+
+	file_server /var/test/* {
+		browse /var/test/upload_index.htm
+	}
+
+	upload {
+		dest_dir /var/test/tmp_upload
+		max_filesize 4MB
+	}
+
+	log {
+		output file access.log
+	}
+}
+----
 # build
 
 [source,shell]
