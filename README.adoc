@@ -12,9 +12,9 @@ In this handler are the following modules in use.
 * github.com/caddyserver/jsonc-adapter
 * upload :-)
 
-# config
+## Configuration
 
-## Parameters
+### Parameters
 
 [cols="2,6",options=header]
 |===
@@ -33,7 +33,7 @@ In this handler are the following modules in use.
   more bytes will return an error with HTTP status 413.
 |===
 
-## JSON
+### JSON
 
 Because I prefer the https://caddyserver.com/docs/json/[JSON Config ] 
 will I write here the config in JSON Syntax.
@@ -55,26 +55,28 @@ will I write here the config in JSON Syntax.
 A full working example is in 
 `docker-files/opt/webroot/config/Caddyfile-upload.json`
 
-## Caddyfile
+### Caddyfile
 
-Here a example Caddyfile
+Here a example Caddyfile which expected that he environment variable
+`APPORT` is set.
 
 [source]
 ----
 {
 	order upload before file_server
 }
-#APPPORT set from env APPPORT=:8888
-{$APPPORT} {
-	root * /var/test
 
-	file_server /var/test/* {
-		browse /var/test/upload_index.htm
-	}
-  @mypost method POST
+{$APPPORT} {
+	root .
+
+	file_server browse
+	templates
+
+	@mypost method POST
 	upload @mypost {
-		dest_dir /var/test/tmp_upload
+		dest_dir tmp-upl
 		max_filesize 4MB
+		response_template templates/upload-resp-template.txt
 	}
 
 	log {
@@ -82,7 +84,8 @@ Here a example Caddyfile
 	}
 }
 ----
-# build
+
+## build
 
 [source,shell]
 ---
@@ -91,9 +94,9 @@ xcaddy build --with github.com/kirsch33/realip \
   --with github.com/git001/caddyv2-upload
 ---
 
-# run
+## run
 
-## cli
+### cli
 
 [source,shell]
 ---
@@ -102,7 +105,7 @@ APPPORT=:2011 ./caddy run \
   -config Caddyfile-upload.json 
 ---
 
-## docker
+### docker
 
 You can get this image from docker hub
 
@@ -122,7 +125,7 @@ docker run --name caddy-test --rm \
   docker.io/me2digital/caddyv2-upload:latest
 ---
 
-# example cli
+## example cli
 
 When you run the Image with port 8888 can you use curl or any other
 tool to post (upload) files
@@ -134,7 +137,7 @@ https://daniel.haxx.se/blog/2015/09/11/unnecessary-use-of-curl-x/[UNNECESSARY US
 Here a example call with curl
 
 [source,shell]
----
+----
 curl -v --form myFile=@README.adoc http://localhost:8888/templates/upload-template.html
 *   Trying 127.0.0.1:8888...
 * TCP_NODELAY set
