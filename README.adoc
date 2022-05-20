@@ -31,6 +31,20 @@ In this handler are the following modules in use.
 |is the maximum size in bytes allowed for the upload.
   It accepts all size values supported by https://pkg.go.dev/github.com/dustin/go-humanize#pkg-constants[go-humanize]. Reads of 
   more bytes will return an error with HTTP status 413.
+
+|**notify_url**
+|After a successful upload will this URL be called. The only supported schema is **https**.
+
+|**notify_method**
+|The default method is `GET`. If you need to make a `POST` request please open a feature issue
+  as for now is a request body handling not implemented
+
+|**insecure**
+|This boolean flag configure the `InsecureSkipVerify` in the  https://pkg.go.dev/crypto/tls#Config[tls-config] .
+  Default is false which implies that a valid CA must be used
+
+|**capath**
+|This is the Parameter where you can define the CA for the **notify_url**.
 |===
 
 ### JSON
@@ -50,15 +64,15 @@ will I write here the config in JSON Syntax.
 ----
 <1> Destination Directory on the Server site
 <2> Maximal possible upload size
-<3> the response template which will be used for respose after upload
+<3> the response template which will be used for response after upload
 
 A full working example is in 
 `docker-files/opt/webroot/config/Caddyfile-upload.json`
 
 ### Caddyfile
 
-Here a example Caddyfile which expected that he environment variable
-`APPORT` is set.
+Here a example Caddyfile which expects that the environment variable
+`APPPORT` is set.
 
 [source]
 ----
