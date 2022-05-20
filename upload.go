@@ -14,6 +14,10 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	Version = "0.2"
+)
+
 func init() {
 	caddy.RegisterModule(Upload{})
 	httpcaddyfile.RegisterHandlerDirective("upload", parseCaddyfile)
@@ -54,8 +58,8 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 
 	if u.DestDir == "" {
 		u.logger.Error("Provision",
-			zap.String("msg", "no Destinaton Directory specified (dest_dir)"))
-		return fmt.Errorf("no Destinaton Directory specified (dest_dir)")
+			zap.String("msg", "no Destination Directory specified (dest_dir)"))
+		return fmt.Errorf("no Destination Directory specified (dest_dir)")
 	}
 
 	mdall_err := os.MkdirAll(u.DestDir, 0755)
@@ -68,7 +72,7 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 
 	if u.ResponseTemplate == "" {
 		u.logger.Warn("Provision",
-			zap.String("msg", "no ResponseTemplate specified (response_template), using the defualt one"),
+			zap.String("msg", "no ResponseTemplate specified (response_template), using the default one"),
 		)
 		u.ResponseTemplate = "upload-resp-template.txt"
 	}
@@ -164,7 +168,7 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 	// write this byte array to our temporary file
 	tempFile.Write(fileBytes)
 
-	u.logger.Info("Successfull Upload Info",
+	u.logger.Info("Successful Upload Info",
 		zap.String("Request uuid", requuid),
 		zap.String("Uploaded File", handler.Filename),
 		zap.Int64("File Size", handler.Size),
@@ -179,7 +183,7 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 	}
 
 	if u.NotifyURL != "" {
-		errNotify := u.SendNotify()
+		errNotify := u.SendNotify(requuid)
 
 		if errNotify != nil {
 			u.logger.Error("Notify Error",
