@@ -6,13 +6,13 @@
 	root .
 
 	file_server browse
-    templates
+	templates
 
-    @mypost method POST
+	@mypost method POST
 	upload @mypost {
 		dest_dir tmp-upl
 		max_filesize 4MB
-        response_template templates/upload-resp-template.txt
+		response_template templates/upload-resp-template.txt
 	}
 
 	log {
