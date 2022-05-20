@@ -2,7 +2,7 @@ package upload
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 
@@ -118,7 +118,7 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 	r.Body = http.MaxBytesReader(w, r.Body, u.MaxFilesize)
 	if max_size_err := r.ParseMultipartForm(u.MaxFilesize); max_size_err != nil {
 		u.logger.Error("ServeHTTP",
-			zap.String("Request uuid", requuid),
+			zap.String("requuid", requuid),
 			zap.String("message", "The uploaded file is too big. Please choose an file that's less than MaxFilesize."),
 			zap.String("MaxFilesize", humanize.Bytes(uint64(u.MaxFilesize))),
 			zap.Error(max_size_err),
@@ -132,7 +132,7 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 	file, handler, ff_err := r.FormFile("myFile")
 	if ff_err != nil {
 		u.logger.Error("FormFile Error",
-			zap.String("Request uuid", requuid),
+			zap.String("requuid", requuid),
 			zap.String("message", "Error Retrieving the File"),
 			zap.Error(ff_err),
 			zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
@@ -146,7 +146,7 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 
 	if tmpf_err != nil {
 		u.logger.Error("TempFile Error",
-			zap.String("Request uuid", requuid),
+			zap.String("requuid", requuid),
 			zap.String("message", "Error at TempFile"),
 			zap.Error(tmpf_err),
 			zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
@@ -156,22 +156,24 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 
 	// read all of the contents of our uploaded file into a
 	// byte array
-	fileBytes, io_err := ioutil.ReadAll(file)
+	//fileBytes, io_err := ioutil.ReadAll(file)
+	fileBytes, io_err := io.Copy(tempFile, file)
 	if io_err != nil {
-		u.logger.Error("ReadAll Error",
-			zap.String("Request uuid", requuid),
-			zap.String("message", "Error at ReadAll"),
+		u.logger.Error("Copy Error",
+			zap.String("requuid", requuid),
+			zap.String("message", "Error at io.Copy"),
 			zap.Error(io_err),
 			zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
 		return caddyhttp.Error(http.StatusInternalServerError, io_err)
 	}
 	// write this byte array to our temporary file
-	tempFile.Write(fileBytes)
+	//tempFile.Write(fileBytes)
 
 	u.logger.Info("Successful Upload Info",
-		zap.String("Request uuid", requuid),
+		zap.String("requuid", requuid),
 		zap.String("Uploaded File", handler.Filename),
 		zap.Int64("File Size", handler.Size),
+		zap.Int64("written-bytes", fileBytes),
 		zap.Any("MIME Header", handler.Header),
 		zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
 
