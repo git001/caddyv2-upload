@@ -27,6 +27,9 @@ In this handler are the following modules in use.
 |**response_template**
 |The response template after a upload was successfully
 
+|**max_form_buffer**
+|The maximum buffer size for https://pkg.go.dev/net/http#Request.ParseMultipartForm[ParseMultipartForm]. The default size is **1G**
+
 |**max_size**
 |is the maximum size in bytes allowed for the upload.
   It accepts all size values supported by https://pkg.go.dev/github.com/dustin/go-humanize#pkg-constants[go-humanize]. Reads of 
@@ -78,6 +81,9 @@ Here a example Caddyfile which expects that the environment variable
 ----
 {
 	order upload before file_server
+	log {
+		level DEBUG
+	}
 }
 
 {$APPPORT} {
@@ -89,6 +95,7 @@ Here a example Caddyfile which expects that the environment variable
 	@mypost method POST
 	upload @mypost {
 		dest_dir tmp-upl
+    max_form_buffer 1G
 		max_filesize 4MB
 		response_template templates/upload-resp-template.txt
 	}

@@ -1,5 +1,9 @@
 {
 	order upload before file_server
+	log {
+		level DEBUG
+	}
+
 }
 
 {$APPPORT} {
@@ -11,6 +15,7 @@
 	@mypost method POST
 	upload @mypost {
 		dest_dir tmp-upl
+		max_form_buffer 1G
 		max_filesize 4MB
 		response_template templates/upload-resp-template.txt
 	}

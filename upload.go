@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	Version = "0.3"
+	Version = "0.4"
 )
 
 func init() {
@@ -28,6 +28,7 @@ func init() {
 type Upload struct {
 	DestDir          string `json:"dest_dir,omitempty"`
 	MaxFilesize      int64  `json:"max_filesize,omitempty"`
+	MaxFormBuffer    int64  `json:"max_form_buffer,omitempty"`
 	ResponseTemplate string `json:"response_template,omitempty"`
 	NotifyURL        string `json:"notify_url,omitempty"`
 	NotifyMethod     string `json:"notify_method,omitempty"`
@@ -81,9 +82,14 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 		u.NotifyMethod = "GET"
 	}
 
+	if u.MaxFormBuffer == 0 {
+		u.MaxFormBuffer = 1000000000
+	}
+
 	u.logger.Info("Current Config",
 		zap.String("dest_dir", u.DestDir),
 		zap.Int64("max_filesize", u.MaxFilesize),
+		zap.Int64("max_form_buffer", u.MaxFormBuffer),
 		zap.String("response_template", u.ResponseTemplate),
 		zap.String("notify_method", u.NotifyMethod),
 		zap.String("notify_url", u.NotifyURL),
@@ -116,7 +122,7 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 	repl.Set("http.upload.max_filesize", u.MaxFilesize)
 
 	r.Body = http.MaxBytesReader(w, r.Body, u.MaxFilesize)
-	if max_size_err := r.ParseMultipartForm(u.MaxFilesize); max_size_err != nil {
+	if max_size_err := r.ParseMultipartForm(u.MaxFormBuffer); max_size_err != nil {
 		u.logger.Error("ServeHTTP",
 			zap.String("requuid", requuid),
 			zap.String("message", "The uploaded file is too big. Please choose an file that's less than MaxFilesize."),
@@ -209,6 +215,16 @@ func (u *Upload) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				if !d.Args(&u.DestDir) {
 					return d.ArgErr()
 				}
+			case "max_form_buffer":
+				var sizeStr string
+				if !d.AllArgs(&sizeStr) {
+					return d.ArgErr()
+				}
+				size, err := humanize.ParseBytes(sizeStr)
+				if err != nil {
+					return d.Errf("parsing max_size: %v", err)
+				}
+				u.MaxFormBuffer = int64(size)
 			case "max_filesize":
 				var sizeStr string
 				if !d.AllArgs(&sizeStr) {
