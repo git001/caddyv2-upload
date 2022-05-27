@@ -18,7 +18,7 @@ In this handler are the following modules in use.
 
 === Parameters
 
-.Table Parameters
+.Parameters
 [cols="2,6",options=header]
 |===
 |Name
@@ -31,7 +31,7 @@ In this handler are the following modules in use.
 |The response template after a upload was successfully
 
 |**max_form_buffer**
-|The maximum buffer size for https://pkg.go.dev/net/http#Request.ParseMultipartForm[ParseMultipartForm]. The default size is **1G**
+|The maximum buffer size for https://pkg.go.dev/net/http#Request.ParseMultipartForm[ParseMultipartForm]. It accepts all size values supported by https://pkg.go.dev/github.com/dustin/go-humanize#pkg-constants[go-humanize]. The default size is **1G**.
 
 |**max_size**
 |is the maximum size in bytes allowed for the upload.
@@ -198,5 +198,6 @@ http.upload.filesize: {{placeholder "http.upload.filesize"}}
 
 == Background informations
 
-The **max_form_buffer** paramater will be directly passed to https://cs.opensource.google/go/go/+/refs/tags/go1.18.2:src/mime/multipart/formdata.go;l=34;drc=7791e934c882fd103357448aee0fd577b20013ce[readForm] function and is used to check if the uploaded file should be saved temporarly on disk or keep it in the memory. This have dicret impact into the performance and disk usage of that module. Keep in mind when this paramter is low and the upload is a big file then will be there a lot of disk io.
+The **max_form_buffer** paramater will be directly passed to https://cs.opensource.google/go/go/+/refs/tags/go1.18.2:src/mime/multipart/formdata.go;l=34;drc=7791e934c882fd103357448aee0fd577b20013ce[readForm] function and is used to check if the uploaded file should be saved temporarly on disk or keep it in the memory. This have dicret impact into the performance and disk usage of that module. Keep in mind when this paramter is low and the upload is a big file then will be there a lot of disk io. +
 
+INFO: The observation from https://github.com/etherwvlf in issue https://github.com/git001/caddyv2-upload/issues/2[Memory issues on large uploads] was that the initial memory usage is 7-8 times higher then the configured **max_form_buffer** size.
