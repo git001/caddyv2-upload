@@ -1,4 +1,5 @@
-# caddyv2-upload
+= caddyv2-upload
+:toc:
 
 This repo holds a simple caddyserver v2 upload handler
 
@@ -12,9 +13,9 @@ In this handler are the following modules in use.
 * github.com/caddyserver/jsonc-adapter
 * upload :-)
 
-## Configuration
+== Configuration
 
-### Parameters
+=== Parameters
 
 [cols="2,6",options=header]
 |===
@@ -50,10 +51,10 @@ In this handler are the following modules in use.
 |This is the Parameter where you can define the CA for the **notify_url**.
 |===
 
-### JSON
+=== JSON
 
 Because I prefer the https://caddyserver.com/docs/json/[JSON Config ] 
-will I write here the config in JSON Syntax.
+will I write here the configuration snipplet in JSON Syntax.
 
 [source,json]
 ----
@@ -72,7 +73,7 @@ will I write here the config in JSON Syntax.
 A full working example is in 
 `docker-files/opt/webroot/config/Caddyfile-upload.json`
 
-### Caddyfile
+=== Caddyfile
 
 Here a example Caddyfile which expects that the environment variable
 `APPPORT` is set.
@@ -95,7 +96,7 @@ Here a example Caddyfile which expects that the environment variable
 	@mypost method POST
 	upload @mypost {
 		dest_dir tmp-upl
-    max_form_buffer 1G
+		max_form_buffer 1G
 		max_filesize 4MB
 		response_template templates/upload-resp-template.txt
 	}
@@ -106,7 +107,7 @@ Here a example Caddyfile which expects that the environment variable
 }
 ----
 
-## build
+== build
 
 [source,shell]
 ---
@@ -115,9 +116,9 @@ xcaddy build --with github.com/kirsch33/realip \
   --with github.com/git001/caddyv2-upload
 ---
 
-## run
+== run
 
-### cli
+=== cli
 
 [source,shell]
 ---
@@ -126,7 +127,7 @@ APPPORT=:2011 ./caddy run \
   -config Caddyfile-upload.json 
 ---
 
-### docker
+=== docker
 
 You can get this image from docker hub
 
@@ -146,7 +147,7 @@ docker run --name caddy-test --rm \
   docker.io/me2digital/caddyv2-upload:latest
 ---
 
-## example cli
+== example cli
 
 When you run the Image with port 8888 can you use curl or any other
 tool to post (upload) files
@@ -192,3 +193,8 @@ http.request.host {{placeholder "http.request.host" }}
 http.upload.filename: {{placeholder "http.upload.filename"}}
 http.upload.filesize: {{placeholder "http.upload.filesize"}}
 ----
+
+== Background informations
+
+The **max_form_buffer** paramater will be directly passed to https://cs.opensource.google/go/go/+/refs/tags/go1.18.2:src/mime/multipart/formdata.go;l=34;drc=7791e934c882fd103357448aee0fd577b20013ce[readForm] function and is used to check if the uploaded file should be saved temporarly on disk or keep it in the memory. This have dicret impact into the performance and disk usage of that module. Keep in mind when this paramter is low and the upload is a big file then will be there a lot of disk io.
+
