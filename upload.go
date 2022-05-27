@@ -87,6 +87,7 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 	}
 
 	u.logger.Info("Current Config",
+		zap.String("Version", Version),
 		zap.String("dest_dir", u.DestDir),
 		zap.Int64("max_filesize", u.MaxFilesize),
 		zap.Int64("max_form_buffer", u.MaxFormBuffer),
