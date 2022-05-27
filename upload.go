@@ -222,7 +222,7 @@ func (u *Upload) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 				size, err := humanize.ParseBytes(sizeStr)
 				if err != nil {
-					return d.Errf("parsing max_size: %v", err)
+					return d.Errf("parsing max_form_buffer: %v", err)
 				}
 				u.MaxFormBuffer = int64(size)
 			case "max_filesize":
@@ -232,7 +232,7 @@ func (u *Upload) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 				size, err := humanize.ParseBytes(sizeStr)
 				if err != nil {
-					return d.Errf("parsing max_size: %v", err)
+					return d.Errf("parsing max_filesize: %v", err)
 				}
 				u.MaxFilesize = int64(size)
 			case "response_template":
