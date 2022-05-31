@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	Version = "0.4"
+	Version = "0.5"
 )
 
 func init() {
@@ -27,6 +27,7 @@ func init() {
 // uploaded file  to a file on the disk.
 type Upload struct {
 	DestDir          string `json:"dest_dir,omitempty"`
+	FileFieldName    string `json:"file_field_name,omitempty"`
 	MaxFilesize      int64  `json:"max_filesize,omitempty"`
 	MaxFormBuffer    int64  `json:"max_form_buffer,omitempty"`
 	ResponseTemplate string `json:"response_template,omitempty"`
@@ -69,6 +70,13 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 			zap.String("msg", "MkdirAll: Error creating destination Directory"),
 			zap.Error(mdall_err))
 		return mdall_err
+	}
+
+	if u.FileFieldName == "" {
+		u.logger.Warn("Provision",
+			zap.String("msg", "no FileFieldName specified (file_field_name), using the default one 'myFile'"),
+		)
+		u.FileFieldName = "myFile"
 	}
 
 	if u.ResponseTemplate == "" {
@@ -133,10 +141,10 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 		return caddyhttp.Error(http.StatusRequestEntityTooLarge, max_size_err)
 	}
 
-	// FormFile returns the first file for the given key `myFile`
+	// FormFile returns the first file for the given file field key
 	// it also returns the FileHeader so we can get the Filename,
 	// the Header and the size of the file
-	file, handler, ff_err := r.FormFile("myFile")
+	file, handler, ff_err := r.FormFile(u.FileFieldName)
 	if ff_err != nil {
 		u.logger.Error("FormFile Error",
 			zap.String("requuid", requuid),
@@ -214,6 +222,10 @@ func (u *Upload) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 
 			case "dest_dir":
 				if !d.Args(&u.DestDir) {
+					return d.ArgErr()
+				}
+			case "file_field_name":
+				if !d.Args(&u.FileFieldName) {
 					return d.ArgErr()
 				}
 			case "max_form_buffer":

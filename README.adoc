@@ -27,6 +27,9 @@ In this handler are the following modules in use.
 |**dest_dir**
 |The directory in which the files will be uploaded
 
+|**file_field_name**
+|The field name for the multi-part form upload
+
 |**response_template**
 |The response template after a upload was successfully
 
@@ -50,7 +53,7 @@ In this handler are the following modules in use.
   Default is false which implies that a valid CA must be used
 
 |**capath**
-|This is the Parameter where you can define the CA for the **notify_url**.
+|This is the Parameter where you can define the CA filename for the **notify_url**.
 |===
 
 === JSON
