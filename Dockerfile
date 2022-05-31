@@ -25,7 +25,7 @@ RUN set -x \
   && cd .. \
   && apt-get -y autoremove \
   && apt-get -y autoclean \
-  && rm -rf build /usr/local/go /var/cache/apk/* \
+  && rm -rf build /usr/local/go /var/cache/apk/* root/.cache root/go/ \
   && /usr/local/bin/caddy list-modules
 
 WORKDIR /opt/webroot/
