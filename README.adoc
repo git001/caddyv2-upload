@@ -34,12 +34,21 @@ In this handler are the following modules in use.
 |The response template after a upload was successfully
 
 |**max_form_buffer**
-|The maximum buffer size for https://pkg.go.dev/net/http#Request.ParseMultipartForm[ParseMultipartForm]. It accepts all size values supported by https://pkg.go.dev/github.com/dustin/go-humanize#pkg-constants[go-humanize]. The default size is **1G**.
+|The maximum buffer size for https://pkg.go.dev/net/http#Request.ParseMultipartForm[ParseMultipartForm]. It accepts all size values supported by https://pkg.go.dev/github.com/dustin/go-humanize#pkg-constants[go-humanize]. +
+The default size is **1G**.
 
-|**max_size**
+|**max_form_buffer_int**
+|The maximum buffer size for https://pkg.go.dev/net/http#Request.ParseMultipartForm[ParseMultipartForm]. +
+The default size is **1G**.
+
+|**max_filesize**
 |is the maximum size in bytes allowed for the upload.
-  It accepts all size values supported by https://pkg.go.dev/github.com/dustin/go-humanize#pkg-constants[go-humanize]. Reads of 
-  more bytes will return an error with HTTP status 413.
+It accepts all size values supported by https://pkg.go.dev/github.com/dustin/go-humanize#pkg-constants[go-humanize]. Reads of more bytes will return an error with HTTP status 413. +
+The default size is **1G**.
+
+|**max_filesize_int**
+|is the maximum size in bytes allowed for the upload. Reads of more bytes will return an error with HTTP status 413. +
+The default size is **1G**.
 
 |**notify_url**
 |After a successful upload will this URL be called. The only supported schema is **https**.
@@ -63,17 +72,22 @@ will I write here the configuration snipplet in JSON Syntax.
 
 [source,json]
 ----
+							"handle": [
+								{
+									"MyTlsSetting": {},
+									"dest_dir": "upload", <1>
+									"handler": "upload",
+									"max_filesize": "5GB", <2>
+									"max_form_buffer_int": 1000000, <3>
+									"response_template": "upload-resp.txt" <4>
+								}
+							]
 
-                {
-                  "handler": "upload",
-                  "dest_dir": "tmp-upl",   # <1>
-                  "max_filesize": 2048,    # <2>
-                  "response_template":"upload-resp-template.txt" # <3>
-                },
 ----
 <1> Destination Directory on the Server site
 <2> Maximal possible upload size
-<3> the response template which will be used for response after upload
+<3> Maximal buffer for uploading
+<4> the response template which will be used for response after upload
 
 A full working example is in 
 `docker-files/opt/webroot/config/Caddyfile-upload.json`
@@ -117,7 +131,6 @@ Here a example Caddyfile which expects that the environment variable
 [source,shell]
 ---
 xcaddy build --with github.com/kirsch33/realip \
-  --with github.com/caddyserver/jsonc-adapter \
   --with github.com/git001/caddyv2-upload
 ---
 
@@ -128,7 +141,6 @@ xcaddy build --with github.com/kirsch33/realip \
 [source,shell]
 ---
 APPPORT=:2011 ./caddy run \
-  -adapter jsonc \
   -config Caddyfile-upload.json 
 ---
 

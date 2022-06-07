@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
@@ -15,7 +16,7 @@ import (
 )
 
 const (
-	Version = "0.5"
+	Version = "0.6"
 )
 
 func init() {
@@ -28,8 +29,10 @@ func init() {
 type Upload struct {
 	DestDir          string `json:"dest_dir,omitempty"`
 	FileFieldName    string `json:"file_field_name,omitempty"`
-	MaxFilesize      int64  `json:"max_filesize,omitempty"`
-	MaxFormBuffer    int64  `json:"max_form_buffer,omitempty"`
+	MaxFilesize      int64  `json:"max_filesize_int,omitempty"`
+	MaxFilesizeH     string `json:"max_filesize,omitempty"`
+	MaxFormBuffer    int64  `json:"max_form_buffer_int,omitempty"`
+	MaxFormBufferH   string `json:"max_form_buffer,omitempty"`
 	ResponseTemplate string `json:"response_template,omitempty"`
 	NotifyURL        string `json:"notify_url,omitempty"`
 	NotifyMethod     string `json:"notify_method,omitempty"`
@@ -90,15 +93,59 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 		u.NotifyMethod = "GET"
 	}
 
-	if u.MaxFormBuffer == 0 {
-		u.MaxFormBuffer = 1000000000
+	if u.MaxFilesize == 0 && u.MaxFilesizeH != "" {
+
+		size, err := humanize.ParseBytes(u.MaxFilesizeH)
+		if err != nil {
+			u.logger.Error("Provision",
+				zap.String("msg", "MaxFilesizeH: Error parsing max_filesize"),
+				zap.Error(err))
+			return err
+		}
+		u.MaxFilesize = int64(size)
+	} else {
+		if u.MaxFilesize == 0 {
+			size, err := humanize.ParseBytes("1GB")
+			if err != nil {
+				u.logger.Error("Provision",
+					zap.String("msg", "MaxFilesizeH: Error parsing max_filesize"),
+					zap.Error(err))
+				return err
+			}
+			u.MaxFilesize = int64(size)
+		}
+	}
+
+	if u.MaxFormBuffer == 0 && u.MaxFormBufferH != "" {
+
+		size, err := humanize.ParseBytes(u.MaxFormBufferH)
+		if err != nil {
+			u.logger.Error("Provision",
+				zap.String("msg", "MaxFormBufferH: Error parsing max_form_buffer"),
+				zap.Error(err))
+			return err
+		}
+		u.MaxFormBuffer = int64(size)
+	} else {
+		if u.MaxFormBuffer == 0 {
+			size, err := humanize.ParseBytes("1GB")
+			if err != nil {
+				u.logger.Error("Provision",
+					zap.String("msg", "MaxFormBufferH: Error parsing max_form_buffer"),
+					zap.Error(err))
+				return err
+			}
+			u.MaxFormBuffer = int64(size)
+		}
 	}
 
 	u.logger.Info("Current Config",
 		zap.String("Version", Version),
 		zap.String("dest_dir", u.DestDir),
-		zap.Int64("max_filesize", u.MaxFilesize),
-		zap.Int64("max_form_buffer", u.MaxFormBuffer),
+		zap.Int64("max_filesize_int", u.MaxFilesize),
+		zap.String("max_filesize", u.MaxFilesizeH),
+		zap.Int64("max_form_buffer_int", u.MaxFormBuffer),
+		zap.String("max_form_buffer", u.MaxFormBufferH),
 		zap.String("response_template", u.ResponseTemplate),
 		zap.String("notify_method", u.NotifyMethod),
 		zap.String("notify_url", u.NotifyURL),
@@ -213,7 +260,6 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 }
 
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler.
-// TODO: make Caddyfile config robust
 func (u *Upload) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 
 	for d.Next() {
@@ -238,6 +284,16 @@ func (u *Upload) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return d.Errf("parsing max_form_buffer: %v", err)
 				}
 				u.MaxFormBuffer = int64(size)
+			case "max_form_buffer_int":
+				var sizeStr string
+				if !d.AllArgs(&sizeStr) {
+					return d.ArgErr()
+				}
+				i, err := strconv.ParseInt(sizeStr, 10, 64)
+				if err != nil {
+					return d.Errf("parsing max_form_buffer_int: %v", err)
+				}
+				u.MaxFormBuffer = i
 			case "max_filesize":
 				var sizeStr string
 				if !d.AllArgs(&sizeStr) {
@@ -248,6 +304,16 @@ func (u *Upload) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return d.Errf("parsing max_filesize: %v", err)
 				}
 				u.MaxFilesize = int64(size)
+			case "max_filesize_int":
+				var sizeStr string
+				if !d.AllArgs(&sizeStr) {
+					return d.ArgErr()
+				}
+				i, err := strconv.ParseInt(sizeStr, 10, 64)
+				if err != nil {
+					return d.Errf("parsing max_filesize_int: %v", err)
+				}
+				u.MaxFilesize = i
 			case "response_template":
 				if !d.Args(&u.ResponseTemplate) {
 					return d.ArgErr()

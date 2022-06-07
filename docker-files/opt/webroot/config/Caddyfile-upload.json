@@ -92,9 +92,11 @@
                   }
                 },
                 {
-                  "handler": "upload",
-                  "dest_dir": "tmp-upl",
-                  "max_filesize": "1MB",
+                  "MyTlsSetting": {},
+									"dest_dir": "upload",
+									"handler": "upload",
+									"max_filesize": "5GB",
+									"max_form_buffer_int": 1000000,
                   "response_template":"upload-resp-template.txt"
                 },
                 {
