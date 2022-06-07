@@ -2,7 +2,8 @@ FROM ubuntu:latest
 
 ENV XCADDY_VERSION=0.3.0 \
     GOLANG_VERSION=18.2 \
-    APPPORT=:2011
+    APPPORT=:2011 \
+    UPLOADER_VERSION=0.6
 
 COPY docker-files /
 
@@ -18,7 +19,6 @@ RUN set -x \
   && export PATH=$PATH:/usr/local/go/bin \
   && tar xfvz xcaddy_${XCADDY_VERSION}_linux_amd64.tar.gz \
   && ./xcaddy build --with github.com/kirsch33/realip \
-    --with github.com/caddyserver/jsonc-adapter \
     --with github.com/git001/caddyv2-upload \
   && pwd \
   && mv caddy /usr/local/bin/ \
@@ -31,4 +31,4 @@ RUN set -x \
 WORKDIR /opt/webroot/
 
 # CMD ["executable","param1","param2"] (exec form, this is the preferred form)
-CMD ["/usr/local/bin/caddy","run","-adapter","jsonc","-config","config/Caddyfile-upload.json"]
+CMD ["/usr/local/bin/caddy","run","-config","config/Caddyfile-upload.json"]
