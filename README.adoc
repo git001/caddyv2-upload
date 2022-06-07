@@ -34,7 +34,10 @@ In this handler are the following modules in use.
 |The response template after a upload was successfully
 
 |**max_form_buffer**
-|The maximum buffer size for https://pkg.go.dev/net/http#Request.ParseMultipartForm[ParseMultipartForm]. It accepts all size values supported by https://pkg.go.dev/github.com/dustin/go-humanize#pkg-constants[go-humanize]. +
+|The maximum buffer size for https://pkg.go.dev/net/http#Request.ParseMultipartForm[ParseMultipartForm]. It accepts all size values supported by https://pkg.go.dev/github.com/dustin/go-humanize#pkg-constants[go-humanize]. Here can also be used a https://caddyserver.com/docs/conventions#placeholders[Placeholder] +
+JSON: `"{env.MAXFILESIZE}"` +
+Caddyfile: `{$MAXBUFFSIZE}` +
+
 The default size is **1G**.
 
 |**max_form_buffer_int**
@@ -43,7 +46,10 @@ The default size is **1G**.
 
 |**max_filesize**
 |is the maximum size in bytes allowed for the upload.
-It accepts all size values supported by https://pkg.go.dev/github.com/dustin/go-humanize#pkg-constants[go-humanize]. Reads of more bytes will return an error with HTTP status 413. +
+It accepts all size values supported by https://pkg.go.dev/github.com/dustin/go-humanize#pkg-constants[go-humanize]. Reads of more bytes will return an error with HTTP status 413. Here can also be used a https://caddyserver.com/docs/conventions#placeholders[Placeholder] +
+JSON: `"{env.MAXFILESIZE}"` +
+Caddyfile: `{$MAXBUFFSIZE}` +
+
 The default size is **1G**.
 
 |**max_filesize_int**

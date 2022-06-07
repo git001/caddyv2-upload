@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	Version = "0.6"
+	Version = "0.7"
 )
 
 func init() {
@@ -61,6 +61,8 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 	u.ctx = ctx
 	u.logger = ctx.Logger(u)
 
+	repl := caddy.NewReplacer()
+
 	if u.DestDir == "" {
 		u.logger.Error("Provision",
 			zap.String("msg", "no Destination Directory specified (dest_dir)"))
@@ -95,6 +97,9 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 
 	if u.MaxFilesize == 0 && u.MaxFilesizeH != "" {
 
+		MaxFilesizeH := repl.ReplaceAll(u.MaxFilesizeH, "1GB")
+		u.MaxFilesizeH = MaxFilesizeH
+
 		size, err := humanize.ParseBytes(u.MaxFilesizeH)
 		if err != nil {
 			u.logger.Error("Provision",
@@ -117,6 +122,9 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 	}
 
 	if u.MaxFormBuffer == 0 && u.MaxFormBufferH != "" {
+
+		MaxFormBufferH := repl.ReplaceAll(u.MaxFormBufferH, "1GB")
+		u.MaxFormBufferH = MaxFormBufferH
 
 		size, err := humanize.ParseBytes(u.MaxFormBufferH)
 		if err != nil {

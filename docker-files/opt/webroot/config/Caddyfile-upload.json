@@ -95,8 +95,7 @@
                   "MyTlsSetting": {},
 									"dest_dir": "upload",
 									"handler": "upload",
-									"max_filesize": "5GB",
-									"max_form_buffer_int": 1000000,
+									"max_filesize": "{env.MAXFILESIZE}",
                   "response_template":"upload-resp-template.txt"
                 },
                 {
