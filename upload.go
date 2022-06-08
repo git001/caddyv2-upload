@@ -102,8 +102,9 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 
 		size, err := humanize.ParseBytes(u.MaxFilesizeH)
 		if err != nil {
-			u.logger.Error("Provision",
+			u.logger.Error("Provision ReplaceAll",
 				zap.String("msg", "MaxFilesizeH: Error parsing max_filesize"),
+				zap.String("MaxFilesizeH", u.MaxFilesizeH),
 				zap.Error(err))
 			return err
 		}
@@ -112,8 +113,9 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 		if u.MaxFilesize == 0 {
 			size, err := humanize.ParseBytes("1GB")
 			if err != nil {
-				u.logger.Error("Provision",
-					zap.String("msg", "MaxFilesizeH: Error parsing max_filesize"),
+				u.logger.Error("Provision int",
+					zap.String("msg", "MaxFilesize: Error parsing max_filesize_int"),
+					zap.Int64("MaxFilesize", u.MaxFilesize),
 					zap.Error(err))
 				return err
 			}
@@ -128,8 +130,9 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 
 		size, err := humanize.ParseBytes(u.MaxFormBufferH)
 		if err != nil {
-			u.logger.Error("Provision",
+			u.logger.Error("Provision ReplaceAll",
 				zap.String("msg", "MaxFormBufferH: Error parsing max_form_buffer"),
+				zap.String("MaxFormBufferH", u.MaxFormBufferH),
 				zap.Error(err))
 			return err
 		}
@@ -138,8 +141,9 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 		if u.MaxFormBuffer == 0 {
 			size, err := humanize.ParseBytes("1GB")
 			if err != nil {
-				u.logger.Error("Provision",
-					zap.String("msg", "MaxFormBufferH: Error parsing max_form_buffer"),
+				u.logger.Error("Provision int",
+					zap.String("msg", "MaxFormBufferH: Error parsing max_form_buffer_int"),
+					zap.Int64("MaxFormBuffer", u.MaxFormBuffer),
 					zap.Error(err))
 				return err
 			}
