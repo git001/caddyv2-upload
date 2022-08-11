@@ -1,9 +1,9 @@
 FROM ubuntu:latest
 
 ENV XCADDY_VERSION=0.3.0 \
-    GOLANG_VERSION=18.2 \
+    GOLANG_VERSION=19 \
     APPPORT=:2011 \
-    UPLOADER_VERSION=0.8
+    UPLOADER_VERSION=0.9
 
 COPY docker-files /
 

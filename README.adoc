@@ -134,10 +134,19 @@ Here a example Caddyfile which expects that the environment variable
 
 == build
 
+=== local
 [source,shell]
 ---
 xcaddy build --with github.com/kirsch33/realip \
   --with github.com/git001/caddyv2-upload
+---
+
+=== docker
+[source,shell]
+---
+buildah bud --tag caddyv2-upload .
+# or
+docker build --tag caddyv2-upload .
 ---
 
 == run
