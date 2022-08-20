@@ -1,0 +1,18 @@
+X-Forwarded-For:   {{.Req.Header.Get "X-Forwarded-For"}}
+X-Forwarded-Host:  {{.Req.Header.Get "X-Forwarded-Host"}}
+X-Forwarded-Port:  {{.Req.Header.Get "X-Forwarded-Port"}}
+X-Forwarded-Proto: {{.Req.Header.Get "X-Forwarded-Proto"}}
+
+{{ if eq (.Req.Header.Get "X-Forwarded-Proto") "https"}}
+I'm https
+{{end}}
+
+Forwarded: {{.Req.Header.Get "Forwarded"}}
+
+UA: {{.Req.Header.Get "User-Agent"}}
+
+All Headers:
+
+{{range $field, $val := .Req.Header}}
+    {{$field}}: {{$val}}
+{{end}}
