@@ -16,16 +16,19 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
-        go-version: 1.18
+        go-version: 1.20.2
 
     - name: Download xcaddy
-      run: curl -vLO https://github.com/caddyserver/xcaddy/releases/download/v0.3.0/xcaddy_0.3.0_linux_amd64.tar.gz
+      run: curl -vLO https://github.com/caddyserver/xcaddy/releases/download/v0.3.2/xcaddy_0.3.2_linux_amd64.tar.gz
       
     - name: Extract xcaddy
-      run: tar xfvz xcaddy_0.3.0_linux_amd64.tar.gz
+      run: tar xfvz xcaddy_0.3.2_linux_amd64.tar.gz
 
     - name: Build
       run: ./xcaddy build --with github.com/kirsch33/realip --with github.com/caddyserver/jsonc-adapter --with github.com/git001/caddyv2-upload
 
     - name: Show caddy modules
       run: ./caddy list-modules
+    
+    - name: Show caddy version
+      run: ./caddy version
