@@ -216,7 +216,7 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 
 	// Create the file within the DestDir directory
 
-	tempFile, tmpf_err := os.OpenFile(u.DestDir+"/"+handler.Filename, os.O_RDWR|os.O_CREATE, 0755)
+	tempFile, tmpf_err := os.OpenFile(u.DestDir+"/"+handler.Filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 
 	if tmpf_err != nil {
 		u.logger.Error("TempFile Error",
