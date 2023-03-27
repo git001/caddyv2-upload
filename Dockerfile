@@ -20,6 +20,7 @@ RUN set -x \
   && tar xfvz xcaddy_${XCADDY_VERSION}_linux_amd64.tar.gz \
   && ./xcaddy build --with github.com/kirsch33/realip \
     --with github.com/git001/caddyv2-upload \
+    --with github.com/caddyserver/jsonc-adapter \
   && pwd \
   && mv caddy /usr/local/bin/ \
   && cd .. \
