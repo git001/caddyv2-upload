@@ -375,6 +375,16 @@ func (u *Upload) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				if !d.Args(&u.MyTlsSetting.CAPath) {
 					return d.ArgErr()
 				}
+			case "create_uuid_dir":
+				var uuidDirStr string
+				if !d.AllArgs(&uuidDirStr) {
+					return d.ArgErr()
+				}
+				uuidDirBool, err := strconv.ParseBool(uuidDirStr)
+				if err != nil {
+					return d.Errf("parsing create_uuid_dir: %v", err)
+				}
+				u.CreateUuidDir = uuidDirBool
 			default:
 				return d.Errf("unrecognized servers option '%s'", d.Val())
 			}
