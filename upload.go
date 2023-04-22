@@ -231,15 +231,15 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 		}
 
 		concatDir = concatDir + "/" + uuidDir.String()
+	}
 
-		if err := os.MkdirAll(concatDir, 0755); err != nil {
-			u.logger.Error("UUID directory creation error",
-				zap.String("requuid", requuid),
-				zap.String("message", "Failed to create "+concatDir),
-				zap.Error(err),
-				zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
-			return caddyhttp.Error(http.StatusInternalServerError, err)
-		}
+	if err := os.MkdirAll(concatDir, 0755); err != nil {
+		u.logger.Error("UUID directory creation error",
+			zap.String("requuid", requuid),
+			zap.String("message", "Failed to create "+concatDir),
+			zap.Error(err),
+			zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
+		return caddyhttp.Error(http.StatusInternalServerError, err)
 	}
 
 	// Create the file within the DestDir directory
@@ -296,7 +296,8 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 		}
 	}
 
-	return next.ServeHTTP(w, r)
+	w.WriteHeader(http.StatusCreated)
+	return nil
 }
 
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler.
