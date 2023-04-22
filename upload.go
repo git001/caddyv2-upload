@@ -12,6 +12,7 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/dustin/go-humanize"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -36,6 +37,7 @@ type Upload struct {
 	ResponseTemplate string `json:"response_template,omitempty"`
 	NotifyURL        string `json:"notify_url,omitempty"`
 	NotifyMethod     string `json:"notify_method,omitempty"`
+	CreateUuidDir    bool   `json:"create_uuid_dir,omitempty"`
 
 	MyTlsSetting struct {
 		InsecureSkipVerify bool   `json:"insecure,omitempty"`
@@ -214,9 +216,35 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 	}
 	defer file.Close()
 
+	concatDir := u.DestDir
+
+	if u.CreateUuidDir {
+		uuidDir := uuid.New()
+
+		// It's very unlikely that the uuidDir already exists, but just in case
+		for {
+			if _, err := os.Stat(concatDir + "/" + uuidDir.String()); os.IsNotExist(err) {
+				break
+			} else {
+				uuidDir = uuid.New()
+			}
+		}
+
+		concatDir = concatDir + "/" + uuidDir.String()
+	}
+
+	if err := os.MkdirAll(concatDir, 0755); err != nil {
+		u.logger.Error("UUID directory creation error",
+			zap.String("requuid", requuid),
+			zap.String("message", "Failed to create "+concatDir),
+			zap.Error(err),
+			zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
+		return caddyhttp.Error(http.StatusInternalServerError, err)
+	}
+
 	// Create the file within the DestDir directory
 
-	tempFile, tmpf_err := os.OpenFile(u.DestDir+"/"+handler.Filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	tempFile, tmpf_err := os.OpenFile(concatDir+"/"+handler.Filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 
 	if tmpf_err != nil {
 		u.logger.Error("TempFile Error",
@@ -268,7 +296,8 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 		}
 	}
 
-	return next.ServeHTTP(w, r)
+	w.WriteHeader(http.StatusCreated)
+	return nil
 }
 
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler.
@@ -347,6 +376,16 @@ func (u *Upload) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				if !d.Args(&u.MyTlsSetting.CAPath) {
 					return d.ArgErr()
 				}
+			case "create_uuid_dir":
+				var uuidDirStr string
+				if !d.AllArgs(&uuidDirStr) {
+					return d.ArgErr()
+				}
+				uuidDirBool, err := strconv.ParseBool(uuidDirStr)
+				if err != nil {
+					return d.Errf("parsing create_uuid_dir: %v", err)
+				}
+				u.CreateUuidDir = uuidDirBool
 			default:
 				return d.Errf("unrecognized servers option '%s'", d.Val())
 			}
@@ -358,12 +397,11 @@ func (u *Upload) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 // parseCaddyfile parses the upload directive. It enables the upload
 // of a file:
 //
-//    upload {
-//        dest_dir          <destination directory>
-//        max_filesize      <size>
-//        response_template [<path to a response template>]
-//    }
-//
+//	upload {
+//	    dest_dir          <destination directory>
+//	    max_filesize      <size>
+//	    response_template [<path to a response template>]
+//	}
 func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
 	var u Upload
 	err := u.UnmarshalCaddyfile(h.Dispenser)

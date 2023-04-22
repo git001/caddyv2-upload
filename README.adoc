@@ -69,6 +69,10 @@ The default size is **1G**.
 
 |**capath**
 |This is the Parameter where you can define the CA filename for the **notify_url**.
+
+|**create_uuid_dir**
+|If set to `true`, each file will get a unique directory with a UUID as its name.
+
 |===
 
 === JSON
