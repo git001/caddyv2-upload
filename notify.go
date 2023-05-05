@@ -2,9 +2,9 @@ package upload
 
 import (
 	"crypto/x509"
-	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/pkg/errors"
@@ -53,7 +53,8 @@ func (u Upload) SendNotify(requuid string) error {
 			return errors.New("Parameter 'capath' makes no sense without Scheme https")
 		}
 
-		caCert, err := ioutil.ReadFile(u.MyTlsSetting.CAPath)
+		// caCert, err := ioutil.ReadFile(u.MyTlsSetting.CAPath)
+		caCert, err := os.ReadFile(u.MyTlsSetting.CAPath)
 		if err != nil {
 			u.logger.Error("Read caCert error",
 				zap.String("requuid", requuid),
