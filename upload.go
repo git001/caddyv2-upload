@@ -276,11 +276,13 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 		zap.String("Uploaded File", handler.Filename),
 		zap.Int64("File Size", handler.Size),
 		zap.Int64("written-bytes", fileBytes),
+		zap.String("UploadDir", concatDir),
 		zap.Any("MIME Header", handler.Header),
 		zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
 
 	repl.Set("http.upload.filename", handler.Filename)
 	repl.Set("http.upload.filesize", handler.Size)
+	repl.Set("http.upload.directory", concatDir)
 
 	if u.ResponseTemplate != "" {
 		r.URL.Path = "/" + u.ResponseTemplate
@@ -398,9 +400,13 @@ func (u *Upload) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 // of a file:
 //
 //	upload {
-//	    dest_dir          <destination directory>
-//	    max_filesize      <size>
-//	    response_template [<path to a response template>]
+//		capath				<CA Path>
+//		create_uuid_dir		true | false
+//		dest_dir			<destination directory>
+//		insecure
+//		max_filesize		<Humanized size>
+//		max_filesize_int	<size>
+//		response_template	[<path to a response template>]
 //	}
 func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
 	var u Upload
