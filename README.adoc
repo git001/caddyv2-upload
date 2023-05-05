@@ -75,6 +75,27 @@ The default size is **1G**.
 
 |===
 
+=== Caddy Variables
+
+The following Variables will be added to the request flow
+
+.variables
+[cols="2,6",options=header]
+|===
+|Name
+|Description
+
+|**http.upload.filename**
+|The uploaded filename
+
+|**http.upload.filesize**
+|The uploaded filesize
+
+|**http.upload.directory**
+|The directory where the file is uploaded
+
+|===
+
 === JSON
 
 Because I prefer the https://caddyserver.com/docs/json/[JSON Config ] 
