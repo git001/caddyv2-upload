@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	Version = "0.10"
+	Version = "0.11"
 )
 
 func init() {
@@ -283,10 +283,6 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 	repl.Set("http.upload.filesize", handler.Size)
 	repl.Set("http.upload.directory", concatDir)
 
-	if u.ResponseTemplate != "" {
-		r.URL.Path = "/" + u.ResponseTemplate
-	}
-
 	if u.NotifyURL != "" {
 		errNotify := u.SendNotify(requuid)
 
@@ -297,8 +293,18 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 		}
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	return nil
+	if u.ResponseTemplate != "" {
+		r.URL.Path = "/" + u.ResponseTemplate
+		/*
+		 * Change the POST method to GET that the following Fileserver
+		 * does not complain about the POST method
+		 */
+		if r.Method == "POST" {
+			r.Method = "GET"
+		}
+	}
+
+	return next.ServeHTTP(w, r)
 }
 
 // Interface guards
