@@ -1,0 +1,29 @@
+{
+	http_port {$APPPORT}
+	auto_https off
+	admin off
+	order upload before file_server
+	log {
+		level DEBUG
+	}
+}
+
+localhost:{$APPPORT} {
+
+	file_server browse
+	templates
+
+	@mypost method POST
+	upload @mypost {
+		dest_dir upload
+		create_uuid_dir true
+		max_filesize 15G
+		max_form_buffer 100MB
+		file_field_name myFile
+		response_template templates/upload-resp-template.txt
+	}
+
+	log {
+		output file access.log
+	}
+}
