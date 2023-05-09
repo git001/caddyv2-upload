@@ -11,6 +11,8 @@
 *.sln.docstates
 
 *tmp-upl
+*upload
+
 # the binary creaded from xcaddy build
 caddy
 
