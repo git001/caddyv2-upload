@@ -32,5 +32,4 @@ RUN set -x \
 
 WORKDIR /opt/webroot/
 
-# CMD ["executable","param1","param2"] (exec form, this is the preferred form)
-CMD ["/usr/local/bin/caddy","run","-config","config/Caddyfile-upload.json"]
+CMD ["/usr/local/bin/caddy","run","--config","config/Caddyfile-upload.json"]
