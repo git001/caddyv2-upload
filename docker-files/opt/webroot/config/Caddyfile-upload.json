@@ -96,11 +96,7 @@
                   "dest_dir": "upload",
                   "handler": "upload",
                   "max_filesize": "{env.MAXFILESIZE}",
-                  "response_template":"upload-resp-template.txt"
-                },
-                {
-                  "handler": "file_server",
-                  "root": "templates"
+                  "response_template":"templates/upload-resp-template.txt"
                 }
               ]
             }

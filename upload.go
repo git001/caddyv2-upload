@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
@@ -16,7 +17,7 @@ import (
 )
 
 const (
-	Version = "0.11"
+	Version = "0.12"
 )
 
 func init() {
@@ -294,17 +295,56 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 	}
 
 	if u.ResponseTemplate != "" {
-		r.URL.Path = "/" + u.ResponseTemplate
-		/*
-		 * Change the POST method to GET that the following Fileserver
-		 * does not complain about the POST method
-		 */
-		if r.Method == "POST" {
-			r.Method = "GET"
+
+		rootDir, rootDirErr := repl.GetString("http.vars.root")
+
+		if !rootDirErr {
+			u.logger.Error("http.root",
+				zap.Bool("rootDirErr", rootDirErr),
+				zap.String("rootDir", rootDir),
+				zap.String("message", "Can't find root dir"),
+				zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
+			return caddyhttp.Error(http.StatusInternalServerError, fmt.Errorf("can't find root dir"))
 		}
+
+		fpAbs, fpErr := filepath.Abs(rootDir)
+		if fpErr != nil {
+			u.logger.Error("filepath Abs Error",
+				zap.String("requuid", requuid),
+				zap.String("message", "Error at Copy"),
+				zap.Error(fpErr),
+				zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
+			return caddyhttp.Error(http.StatusInternalServerError, fpErr)
+		}
+
+		fileRespTemplate, fRTErr := os.Open(fpAbs + "/" + u.ResponseTemplate)
+		if fRTErr != nil {
+			u.logger.Error("File Response Template open Error",
+				zap.String("requuid", requuid),
+				zap.String("rootDir", rootDir),
+				zap.String("message", "Error at os.Open"),
+				zap.Error(fRTErr),
+				zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
+			return caddyhttp.Error(http.StatusInternalServerError, io_err)
+		}
+		defer fileRespTemplate.Close()
+
+		// get information about the file
+		info, fRTSTErr := fileRespTemplate.Stat()
+		if fRTSTErr != nil {
+			u.logger.Error("File Response Template Stat Error",
+				zap.String("requuid", requuid),
+				zap.String("message", "Error at fileRespTemplate.Stat"),
+				zap.Error(fRTSTErr),
+				zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
+			return caddyhttp.Error(http.StatusInternalServerError, io_err)
+		}
+
+		http.ServeContent(w, r, info.Name(), info.ModTime(), fileRespTemplate)
+		return nil
 	}
 
-	return next.ServeHTTP(w, r)
+	return nil
 }
 
 // Interface guards

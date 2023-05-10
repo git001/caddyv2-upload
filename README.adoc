@@ -16,6 +16,9 @@ In this handler are the following modules in use.
 
 == Configuration
 
+IMPORTANT: The relative paths are relative to the current web root
+  directory `http.vars.root`!
+
 === Parameters
 
 .Parameters
@@ -103,16 +106,16 @@ will I write here the configuration snipplet in JSON Syntax.
 
 [source,json]
 ----
-							"handle": [
-								{
-									"MyTlsSetting": {},
-									"dest_dir": "upload", <1>
-									"handler": "upload",
-									"max_filesize": "5GB", <2>
-									"max_form_buffer_int": 1000000, <3>
-									"response_template": "upload-resp.txt" <4>
-								}
-							]
+	"handle": [
+		{
+			"MyTlsSetting": {},
+			"dest_dir": "upload", <1>
+			"handler": "upload",
+			"max_filesize": "5GB", <2>
+			"max_form_buffer_int": 1000000, <3>
+			"response_template": "upload-resp.txt" <4>
+		}
+	]
 
 ----
 <1> Destination Directory on the Server site
