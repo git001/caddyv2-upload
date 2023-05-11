@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
@@ -29,6 +28,7 @@ func init() {
 // uploaded file  to a file on the disk.
 type Upload struct {
 	DestDir          string `json:"dest_dir,omitempty"`
+	RootDir          string `json:"root_dir,omitempty"`
 	FileFieldName    string `json:"file_field_name,omitempty"`
 	MaxFilesize      int64  `json:"max_filesize_int,omitempty"`
 	MaxFilesizeH     string `json:"max_filesize,omitempty"`
@@ -69,6 +69,11 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 		u.logger.Error("Provision",
 			zap.String("msg", "no Destination Directory specified (dest_dir)"))
 		return fmt.Errorf("no Destination Directory specified (dest_dir)")
+	}
+
+	if u.RootDir == "" {
+		u.logger.Info("Provision",
+			zap.String("msg", "no Root Directory specified (root_dir), will use {http.vars.root}"))
 	}
 
 	mdall_err := os.MkdirAll(u.DestDir, 0755)
@@ -156,6 +161,7 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 	u.logger.Info("Current Config",
 		zap.String("Version", Version),
 		zap.String("dest_dir", u.DestDir),
+		zap.String("root_dir", u.RootDir),
 		zap.Int64("max_filesize_int", u.MaxFilesize),
 		zap.String("max_filesize", u.MaxFilesizeH),
 		zap.Int64("max_form_buffer_int", u.MaxFormBuffer),
@@ -216,21 +222,34 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 	}
 	defer file.Close()
 
-	concatDir := u.DestDir
+	if u.RootDir == "" {
+		var rootDirErr bool
+		u.RootDir, rootDirErr = repl.GetString("http.vars.root")
+
+		if !rootDirErr {
+			u.logger.Error("Provision",
+				zap.Bool("rootDirErr", rootDirErr),
+				zap.String("rootDir", u.RootDir),
+				zap.String("message", "Variable {http.vars.root} not defined"))
+			return caddyhttp.Error(http.StatusInternalServerError, fmt.Errorf("can't find root dir"))
+		}
+	}
+
+	concatDir := caddyhttp.SanitizedPathJoin(u.RootDir, u.DestDir)
 
 	if u.CreateUuidDir {
 		uuidDir := uuid.New()
 
 		// It's very unlikely that the uuidDir already exists, but just in case
 		for {
-			if _, err := os.Stat(concatDir + "/" + uuidDir.String()); os.IsNotExist(err) {
+			if _, err := os.Stat(caddyhttp.SanitizedPathJoin(concatDir, uuidDir.String())); os.IsNotExist(err) {
 				break
 			} else {
 				uuidDir = uuid.New()
 			}
 		}
 
-		concatDir = concatDir + "/" + uuidDir.String()
+		concatDir = caddyhttp.SanitizedPathJoin(concatDir, uuidDir.String())
 	}
 
 	if err := os.MkdirAll(concatDir, 0755); err != nil {
@@ -244,7 +263,7 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 
 	// Create the file within the DestDir directory
 
-	tempFile, tmpf_err := os.OpenFile(concatDir+"/"+handler.Filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	tempFile, tmpf_err := os.OpenFile(caddyhttp.SanitizedPathJoin(concatDir, handler.Filename), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 
 	if tmpf_err != nil {
 		u.logger.Error("TempFile Error",
@@ -296,33 +315,11 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 
 	if u.ResponseTemplate != "" {
 
-		rootDir, rootDirErr := repl.GetString("http.vars.root")
-
-		if !rootDirErr {
-			u.logger.Error("http.root",
-				zap.Bool("rootDirErr", rootDirErr),
-				zap.String("rootDir", rootDir),
-				zap.String("message", "Can't find root dir"),
-				zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
-			return caddyhttp.Error(http.StatusInternalServerError, fmt.Errorf("can't find root dir"))
-		}
-
-		fpAbs, fpErr := filepath.Abs(rootDir)
-		if fpErr != nil {
-			u.logger.Error("filepath Abs Error",
-				zap.String("requuid", requuid),
-				zap.String("rootDir", rootDir),
-				zap.String("message", "Error at Copy"),
-				zap.Error(fpErr),
-				zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
-			return caddyhttp.Error(http.StatusInternalServerError, fpErr)
-		}
-
-		fileRespTemplate, fRTErr := os.Open(fpAbs + "/" + u.ResponseTemplate)
+		fileRespTemplate, fRTErr := os.Open(caddyhttp.SanitizedPathJoin(u.RootDir, u.ResponseTemplate))
 		if fRTErr != nil {
 			u.logger.Error("File Response Template open Error",
 				zap.String("requuid", requuid),
-				zap.String("rootDir", rootDir),
+				zap.Any("fileRespTemplate", fileRespTemplate),
 				zap.String("message", "Error at os.Open"),
 				zap.Error(fRTErr),
 				zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
@@ -335,7 +332,7 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 		if fRTSTErr != nil {
 			u.logger.Error("File Response Template Stat Error",
 				zap.String("requuid", requuid),
-				zap.String("rootDir", rootDir),
+				zap.Any("fileRespTemplate", fileRespTemplate),
 				zap.String("message", "Error at fileRespTemplate.Stat"),
 				zap.Error(fRTSTErr),
 				zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))

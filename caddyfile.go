@@ -20,6 +20,10 @@ func (u *Upload) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				if !d.Args(&u.DestDir) {
 					return d.ArgErr()
 				}
+			case "root_dir":
+				if !d.Args(&u.RootDir) {
+					return d.ArgErr()
+				}
 			case "file_field_name":
 				if !d.Args(&u.FileFieldName) {
 					return d.ArgErr()

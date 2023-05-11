@@ -30,6 +30,10 @@ IMPORTANT: The relative paths are relative to the current web root
 |**dest_dir**
 |The directory in which the files will be uploaded
 
+|**root_dir**
+|The root directory for this module. When not set will the root
+directory be evaluated at runtime from this variable `http.vars.root`.
+
 |**file_field_name**
 |The field name for the multi-part form upload
 
