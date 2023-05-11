@@ -311,6 +311,7 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 		if fpErr != nil {
 			u.logger.Error("filepath Abs Error",
 				zap.String("requuid", requuid),
+				zap.String("rootDir", rootDir),
 				zap.String("message", "Error at Copy"),
 				zap.Error(fpErr),
 				zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
@@ -325,7 +326,7 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 				zap.String("message", "Error at os.Open"),
 				zap.Error(fRTErr),
 				zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
-			return caddyhttp.Error(http.StatusInternalServerError, io_err)
+			return caddyhttp.Error(http.StatusInternalServerError, fRTErr)
 		}
 		defer fileRespTemplate.Close()
 
@@ -334,10 +335,11 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 		if fRTSTErr != nil {
 			u.logger.Error("File Response Template Stat Error",
 				zap.String("requuid", requuid),
+				zap.String("rootDir", rootDir),
 				zap.String("message", "Error at fileRespTemplate.Stat"),
 				zap.Error(fRTSTErr),
 				zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
-			return caddyhttp.Error(http.StatusInternalServerError, io_err)
+			return caddyhttp.Error(http.StatusInternalServerError, fRTSTErr)
 		}
 
 		http.ServeContent(w, r, info.Name(), info.ModTime(), fileRespTemplate)
