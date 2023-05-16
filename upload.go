@@ -76,14 +76,6 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 			zap.String("msg", "no Root Directory specified (root_dir), will use {http.vars.root}"))
 	}
 
-	mdall_err := os.MkdirAll(u.DestDir, 0755)
-	if mdall_err != nil {
-		u.logger.Error("Provision",
-			zap.String("msg", "MkdirAll: Error creating destination Directory"),
-			zap.Error(mdall_err))
-		return mdall_err
-	}
-
 	if u.FileFieldName == "" {
 		u.logger.Warn("Provision",
 			zap.String("msg", "no FileFieldName specified (file_field_name), using the default one 'myFile'"),
@@ -277,7 +269,6 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 
 	// read all of the contents of our uploaded file into a
 	// byte array
-	//fileBytes, io_err := ioutil.ReadAll(file)
 	fileBytes, io_err := io.Copy(tempFile, file)
 	if io_err != nil {
 		u.logger.Error("Copy Error",
@@ -287,8 +278,6 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 			zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
 		return caddyhttp.Error(http.StatusInternalServerError, io_err)
 	}
-	// write this byte array to our temporary file
-	//tempFile.Write(fileBytes)
 
 	u.logger.Info("Successful Upload Info",
 		zap.String("requuid", requuid),
