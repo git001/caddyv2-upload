@@ -9,7 +9,6 @@
 }
 
 localhost:{$APPPORT} {
-
 	file_server browse
 	templates
 
