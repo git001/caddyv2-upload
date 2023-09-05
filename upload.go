@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	Version = "0.13"
+	Version = "0.14"
 )
 
 func init() {
@@ -161,6 +161,7 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 		zap.String("response_template", u.ResponseTemplate),
 		zap.String("notify_method", u.NotifyMethod),
 		zap.String("notify_url", u.NotifyURL),
+		zap.Bool("CreateUuidDir", u.CreateUuidDir),
 		zap.String("capath", u.MyTlsSetting.CAPath),
 		zap.Bool("insecure", u.MyTlsSetting.InsecureSkipVerify),
 	)
@@ -199,6 +200,10 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 			zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
 		return caddyhttp.Error(http.StatusRequestEntityTooLarge, max_size_err)
 	}
+
+	// cleanup uploaded files see
+	// https://github.com/git001/caddyv2-upload/issues/13
+	defer r.MultipartForm.RemoveAll()
 
 	// FormFile returns the first file for the given file field key
 	// it also returns the FileHeader so we can get the Filename,

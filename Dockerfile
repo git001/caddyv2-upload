@@ -3,7 +3,7 @@ FROM ubuntu:latest
 ENV XCADDY_VERSION=0.3.4 \
     GOLANG_VERSION=20.7 \
     APPPORT=:2011 \
-    UPLOADER_VERSION=0.13
+    UPLOADER_VERSION=0.14
 
 COPY docker-files /
 
