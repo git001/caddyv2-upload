@@ -8,3 +8,5 @@ http.upload.filename: {{placeholder "http.upload.filename"}}
 http.upload.filesize: {{placeholder "http.upload.filesize"}}
 http.upload.directory: {{placeholder "http.upload.directory"}}
 
+http.upload.uuiddir: {{placeholder "http.upload.uuiddir"}}
+

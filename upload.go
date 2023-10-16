@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	Version = "0.14"
+	Version = "0.15"
 )
 
 func init() {
@@ -235,18 +235,19 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 	concatDir := caddyhttp.SanitizedPathJoin(u.RootDir, u.DestDir)
 
 	if u.CreateUuidDir {
-		uuidDir := uuid.New()
+		uuidDir := uuid.New().String()
 
 		// It's very unlikely that the uuidDir already exists, but just in case
 		for {
-			if _, err := os.Stat(caddyhttp.SanitizedPathJoin(concatDir, uuidDir.String())); os.IsNotExist(err) {
+			if _, err := os.Stat(caddyhttp.SanitizedPathJoin(concatDir, uuidDir)); os.IsNotExist(err) {
 				break
 			} else {
-				uuidDir = uuid.New()
+				uuidDir = uuid.New().String()
 			}
 		}
 
-		concatDir = caddyhttp.SanitizedPathJoin(concatDir, uuidDir.String())
+		concatDir = caddyhttp.SanitizedPathJoin(concatDir, uuidDir)
+		repl.Set("http.upload.uuiddir", uuidDir)
 	}
 
 	if err := os.MkdirAll(concatDir, 0755); err != nil {

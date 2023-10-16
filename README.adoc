@@ -101,6 +101,9 @@ The following Variables will be added to the request flow
 |**http.upload.directory**
 |The directory where the file is uploaded
 
+|**http.upload.uuiddir**
+|The name of the random directory created if `create_uuid_dir` is enabled
+
 |===
 
 === JSON
