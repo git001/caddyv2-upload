@@ -37,6 +37,9 @@ directory be evaluated at runtime from this variable `http.vars.root`.
 |**file_field_name**
 |The field name for the multi-part form upload
 
+|**fixed_file_name**
+|When set, all uploaded files will be renamed to the provided file name.
+
 |**response_template**
 |The response template after a upload was successfully
 
