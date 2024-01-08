@@ -28,6 +28,10 @@ func (u *Upload) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				if !d.Args(&u.FileFieldName) {
 					return d.ArgErr()
 				}
+			case "fixed_file_name":
+				if !d.Args(&u.FixedFileName) {
+					return d.ArgErr()
+				}
 			case "max_form_buffer":
 				var sizeStr string
 				if !d.AllArgs(&sizeStr) {

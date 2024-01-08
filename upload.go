@@ -30,6 +30,7 @@ type Upload struct {
 	DestDir          string `json:"dest_dir,omitempty"`
 	RootDir          string `json:"root_dir,omitempty"`
 	FileFieldName    string `json:"file_field_name,omitempty"`
+	FixedFileName    string `json:"fixed_file_name,omitempty"`
 	MaxFilesize      int64  `json:"max_filesize_int,omitempty"`
 	MaxFilesizeH     string `json:"max_filesize,omitempty"`
 	MaxFormBuffer    int64  `json:"max_form_buffer_int,omitempty"`
@@ -81,6 +82,11 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 			zap.String("msg", "no FileFieldName specified (file_field_name), using the default one 'myFile'"),
 		)
 		u.FileFieldName = "myFile"
+	}
+
+	if u.FixedFileName == "" {
+		u.logger.Info("Provision",
+			zap.String("msg", "no fixed file name specified (fixed_file_name), will use file name from header"))
 	}
 
 	if u.ResponseTemplate == "" {
@@ -154,6 +160,7 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 		zap.String("Version", Version),
 		zap.String("dest_dir", u.DestDir),
 		zap.String("root_dir", u.RootDir),
+		zap.String("fixed_file_name", u.FixedFileName),
 		zap.Int64("max_filesize_int", u.MaxFilesize),
 		zap.String("max_filesize", u.MaxFilesizeH),
 		zap.Int64("max_form_buffer_int", u.MaxFormBuffer),
@@ -261,7 +268,12 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 
 	// Create the file within the DestDir directory
 
-	tempFile, tmpf_err := os.OpenFile(caddyhttp.SanitizedPathJoin(concatDir, handler.Filename), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	var filename string = handler.Filename
+	if u.FixedFileName != "" {
+		filename = u.FixedFileName
+	}
+
+	tempFile, tmpf_err := os.OpenFile(caddyhttp.SanitizedPathJoin(concatDir, filename), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 
 	if tmpf_err != nil {
 		u.logger.Error("TempFile Error",
@@ -287,14 +299,14 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 
 	u.logger.Info("Successful Upload Info",
 		zap.String("requuid", requuid),
-		zap.String("Uploaded File", handler.Filename),
+		zap.String("Uploaded File", filename),
 		zap.Int64("File Size", handler.Size),
 		zap.Int64("written-bytes", fileBytes),
 		zap.String("UploadDir", concatDir),
 		zap.Any("MIME Header", handler.Header),
 		zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
 
-	repl.Set("http.upload.filename", handler.Filename)
+	repl.Set("http.upload.filename", filename)
 	repl.Set("http.upload.filesize", handler.Size)
 	repl.Set("http.upload.directory", concatDir)
 
