@@ -1,0 +1,33 @@
+{
+	http_port 8080
+	https_port 8443
+	order upload before file_server
+	log {
+		level DEBUG
+	}
+}
+
+https://localhost:8443 {
+	root .
+
+	file_server browse
+	templates
+
+	basicauth {
+		# asdf1234
+		bob JDJhJDE0JFZTbnlLL0hzUlNoSkU2UXFnNlJlTU9uRmhyU1piclhTWGdreDN6V1BKUE1Zc2UyUHgzLmRL
+	}
+
+	@mypost method POST
+	upload @mypost {
+		dest_dir tmp-upl
+		max_form_buffer 100MB
+		max_filesize 4MB
+		response_template templates/upload-resp-template.txt
+	}
+
+	log {
+		output file access.log
+	}
+}
+
