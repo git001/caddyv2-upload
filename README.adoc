@@ -19,6 +19,22 @@ In this handler are the following modules in use.
 IMPORTANT: The relative paths are relative to the current web root
   directory `http.vars.root`!
 
+=== Environment Variables
+
+.Parameters
+[cols="2,6",options=header]
+|===
+|Name
+|Description
+
+|**APPPORT**
+|The Port on which Caddyserver should listen. The format depends which Configuration file format you use. See the official Caddyserver documentation for the format https://caddyserver.com/docs/conventions#network-addresses[Network addresses]
+
+|**SKIP_LOG**
+|With this variable can you control if the health check will be logged or not. This feature was implemented as part of the vars handler.
+
+|===
+
 === Parameters
 
 .Parameters
@@ -45,7 +61,7 @@ directory be evaluated at runtime from this variable `http.vars.root`.
 
 |**max_form_buffer**
 |The maximum buffer size for https://pkg.go.dev/net/http#Request.ParseMultipartForm[ParseMultipartForm]. It accepts all size values supported by https://pkg.go.dev/github.com/dustin/go-humanize#pkg-constants[go-humanize]. Here can also be used a https://caddyserver.com/docs/conventions#placeholders[Placeholder] +
-JSON: `"{env.MAXFILESIZE}"` +
+JSON: `"{env.MAXBUFFSIZE}"` +
 Caddyfile: `{$MAXBUFFSIZE}` +
 
 The default size is **1G**.
@@ -58,7 +74,7 @@ The default size is **1G**.
 |is the maximum size in bytes allowed for the upload.
 It accepts all size values supported by https://pkg.go.dev/github.com/dustin/go-humanize#pkg-constants[go-humanize]. Reads of more bytes will return an error with HTTP status 413. Here can also be used a https://caddyserver.com/docs/conventions#placeholders[Placeholder] +
 JSON: `"{env.MAXFILESIZE}"` +
-Caddyfile: `{$MAXBUFFSIZE}` +
+Caddyfile: `{$MAXFILESIZE}` +
 
 The default size is **1G**.
 
@@ -174,28 +190,28 @@ Here a example Caddyfile which expects that the environment variable
 
 === local
 [source,shell]
----
+----
 xcaddy build --with github.com/kirsch33/realip \
   --with github.com/git001/caddyv2-upload
----
+----
 
 === docker
 [source,shell]
----
+----
 buildah bud --tag caddyv2-upload .
 # or
 docker build --tag caddyv2-upload .
----
+----
 
 == run
 
 === cli
 
 [source,shell]
----
+----
 APPPORT=:2011 ./caddy run \
   -config Caddyfile-upload.json 
----
+----
 
 === docker
 
@@ -208,14 +224,72 @@ The default listen port must be defined with this variable
 https://hub.docker.com/r/me2digital/caddyv2-upload
 
 [source,shell]
----
+----
 podman run --rm --network host --name caddy-test \
   --env APPPORT=:8888 -it \
   docker.io/me2digital/caddyv2-upload:latest
 # or 
 docker run --name caddy-test --rm \
   docker.io/me2digital/caddyv2-upload:latest
----
+----
+
+=== OpenShift / kubernetes
+
+You can use the examples in the directory `openshift` to deploy the caddy uploader
+into your OpenShift or kubernetes Cluster.
+
+[source,shell]
+----
+oc new-project caddyupload
+oc -n caddyupload apply -f openshift/
+----
+
+To adopt the used Caddyfile then can you easily do this with a configmap.
+The commands below show the steps.
+
+[source,shell]
+----
+# add configure change trigger
+oc -n caddyupload \
+  set triggers \
+  deployment.apps/caddy-upload \
+  --from-config
+
+# create configmap
+oc -n caddyupload \
+  create configmap \
+  caddyfile-json \
+  --from-file=Caddyfile-upload.json=<PATH_TO_LOCAL>/Caddyfile-upload.json
+
+# add configmap to caddy deployment
+oc -n caddyupload \
+  set volumes \
+  deployment.apps/caddy-upload \
+  --add --configmap-name=caddyfile-json \
+  --mount-path=/opt/webroot/config/Caddyfile-upload.json \
+  --name=caddyfile-json \
+  --sub-path=Caddyfile-upload.json \
+  --type=configmap
+----
+
+In case the first shot of the configuration file does not work can you use the following
+commands to recreate the configuration file.
+
+[source,shell]
+----
+oc -n caddyupload-nis delete configmap caddyfile-json \
+&& oc -n caddyupload-nis create configmap caddyfile-json --from-file=Caddyfile-upload.json=<PATH_TO_LOCAL>/Caddyfile-upload.json
+
+# output of the commands
+configmap "caddyfile-json" deleted
+configmap/caddyfile-json created
+----
+
+== Health probe
+
+There is a builtin health handler with the path `/health` which just returns
+`200` and `Okay`.
+The log output can be controled via the environment variable `SKIP_LOG`.
 
 == example cli
 
