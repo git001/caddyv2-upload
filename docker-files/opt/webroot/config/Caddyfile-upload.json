@@ -21,6 +21,10 @@
               ],
               "handle": [
                 {
+                  "handler":"vars",
+                  "skip_log": "{env.SKIP_LOG}"
+                },
+                {
                   "handler": "static_response",
                   "status_code": 200,
                   "body": "Okay",
@@ -33,7 +37,6 @@
                 {
                   "method": ["GET"],
                   "path": ["/print-headers-template.txt"]
-                  
                 }
               ],
               "handle": [
@@ -83,7 +86,7 @@
                 },
                 {
                   "handler": "file_server",
-                  "browse": 
+                  "browse":
                     {
                     }
                 }
