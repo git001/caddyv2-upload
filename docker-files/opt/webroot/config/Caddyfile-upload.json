@@ -16,6 +16,22 @@
               "match":[
                 {
                   "method": ["GET"],
+                  "path": ["/health"]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "static_response",
+                  "status_code": 200,
+                  "body": "Okay",
+                  "close": true
+                }
+              ]
+            },
+            {
+              "match":[
+                {
+                  "method": ["GET"],
                   "path": ["/print-headers-template.txt"]
                   
                 }
