@@ -1,0 +1,20 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: caddy-upload
+  labels:
+    app: caddy-upload
+  annotations:
+    # Needed so we get the original X-Forwarded headers
+    haproxy.router.openshift.io/set-forwarded-headers: if-none
+spec:
+  # host: TODO: Add optional host name
+  port:
+    targetPort: http
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: edge
+  to:
+    kind: Service
+    name: caddy-upload
+    weight: null

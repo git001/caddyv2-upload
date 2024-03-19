@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: caddy-upload
+  name: caddy-upload
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: caddy-upload
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: caddy-upload
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+        runAsNonRoot: true
+      containers:
+        - name: caddy-upload
+          # TODO: Adopt to your image if wished
+          image: me2digital/caddyv2-upload:latest
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: APPPORT
+              value: ':2011'
+            - name: XDG_DATA_HOME
+              value: /opt/
+            - name: SKIP_LOG
+              value: 'true'
+          ports:
+            - containerPort: 2011
+              name: http
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 2011
+              scheme: HTTP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 2011
+              scheme: HTTP
+            initialDelaySeconds: 10
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 2011
+              scheme: HTTP
+            initialDelaySeconds: 10
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 400m
+              memory: 500Mi
+            limits:
+              cpu: 400m
+              memory: 500Mi
