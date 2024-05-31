@@ -1,7 +1,7 @@
 FROM ubuntu:latest
 
-ENV XCADDY_VERSION=0.3.5 \
-    GOLANG_VERSION=22.0 \
+ENV XCADDY_VERSION=0.4.2 \
+    GOLANG_VERSION=22.3 \
     APPPORT=:2011 \
     UPLOADER_VERSION=0.17
 
@@ -15,7 +15,7 @@ RUN set -x \
   && curl -sSLO https://github.com/caddyserver/xcaddy/releases/download/v${XCADDY_VERSION}/xcaddy_${XCADDY_VERSION}_linux_amd64.tar.gz \
   && curl -sSLO https://go.dev/dl/go1.${GOLANG_VERSION}.linux-amd64.tar.gz \
   && rm -rf /usr/local/go \
-  && tar -C /usr/local -xzf go1.${GOLANG_VERSION}.linux-amd64.tar.gz \
+  && tar -C /usr/local --no-overwrite-dir --no-same-owner --no-same-permissions -xzf go1.${GOLANG_VERSION}.linux-amd64.tar.gz \
   && export PATH=$PATH:/usr/local/go/bin \
   && tar xfvz xcaddy_${XCADDY_VERSION}_linux_amd64.tar.gz \
   && ./xcaddy build --with github.com/kirsch33/realip \
