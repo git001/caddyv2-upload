@@ -39,6 +39,7 @@ type Upload struct {
 	NotifyURL        string `json:"notify_url,omitempty"`
 	NotifyMethod     string `json:"notify_method,omitempty"`
 	CreateUuidDir    bool   `json:"create_uuid_dir,omitempty"`
+	DestDirFieldName string `json:"dest_dir_field_name,omitempty"`
 
 	MyTlsSetting struct {
 		InsecureSkipVerify bool   `json:"insecure,omitempty"`
@@ -66,10 +67,10 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 
 	repl := caddy.NewReplacer()
 
-	if u.DestDir == "" {
+	if u.DestDir == "" && u.DestDirFieldName == "" {
 		u.logger.Error("Provision",
-			zap.String("msg", "no Destination Directory specified (dest_dir)"))
-		return fmt.Errorf("no Destination Directory specified (dest_dir)")
+			zap.String("msg", "no Destination Directory specified (dest_dir or dest_dir_field_name)"))
+		return fmt.Errorf("no Destination Directory specified (dest_dir or dest_dir_field_name)")
 	}
 
 	if u.RootDir == "" {
@@ -171,6 +172,7 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 		zap.Bool("CreateUuidDir", u.CreateUuidDir),
 		zap.String("capath", u.MyTlsSetting.CAPath),
 		zap.Bool("insecure", u.MyTlsSetting.InsecureSkipVerify),
+		zap.String("dest_dir_field_name", u.DestDirFieldName),
 	)
 
 	return nil
@@ -237,6 +239,10 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 				zap.String("message", "Variable {http.vars.root} not defined"))
 			return caddyhttp.Error(http.StatusInternalServerError, fmt.Errorf("can't find root dir"))
 		}
+	}
+
+	if u.DestDirFieldName != "" {
+		u.DestDir = r.FormValue(u.DestDirFieldName)
 	}
 
 	concatDir := caddyhttp.SanitizedPathJoin(u.RootDir, u.DestDir)
