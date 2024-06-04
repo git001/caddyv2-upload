@@ -99,6 +99,9 @@ The default size is **1G**.
 |**create_uuid_dir**
 |If set to `true`, each file will get a unique directory with a UUID as its name.
 
+|**dest_dir_field_name**
+|If set, the dest_dir will be set from the specified form value.
+
 |===
 
 === Caddy Variables

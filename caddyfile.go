@@ -103,6 +103,10 @@ func (u *Upload) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return d.Errf("parsing create_uuid_dir: %v", err)
 				}
 				u.CreateUuidDir = uuidDirBool
+			case "dest_dir_field_name":
+				if !d.Args(&u.DestDirFieldName) {
+					return d.ArgErr()
+				}
 			default:
 				return d.Errf("unrecognized servers option '%s'", d.Val())
 			}
