@@ -40,6 +40,7 @@ type Upload struct {
 	NotifyMethod     string `json:"notify_method,omitempty"`
 	CreateUuidDir    bool   `json:"create_uuid_dir,omitempty"`
 	DestDirFieldName string `json:"dest_dir_field_name,omitempty"`
+	PassThru         bool   `json:"pass_thru,omitempty"`
 
 	MyTlsSetting struct {
 		InsecureSkipVerify bool   `json:"insecure,omitempty"`
@@ -173,6 +174,7 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 		zap.String("capath", u.MyTlsSetting.CAPath),
 		zap.Bool("insecure", u.MyTlsSetting.InsecureSkipVerify),
 		zap.String("dest_dir_field_name", u.DestDirFieldName),
+		zap.Bool("pass_thru", u.PassThru),
 	)
 
 	return nil
@@ -324,6 +326,10 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 				zap.Error(errNotify),
 			)
 		}
+	}
+
+	if u.PassThru {
+		return next.ServeHTTP(w, r)
 	}
 
 	if u.ResponseTemplate != "" {
