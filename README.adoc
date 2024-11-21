@@ -102,6 +102,9 @@ The default size is **1G**.
 |**dest_dir_field_name**
 |If set, the dest_dir will be set from the specified form value.
 
+|**pass_thru**
+|If set to `true`, enables pass-thru mode, which continues to the next HTTP handler in the route instead of responding directly.
+
 |===
 
 === Caddy Variables

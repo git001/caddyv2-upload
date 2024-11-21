@@ -107,6 +107,16 @@ func (u *Upload) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				if !d.Args(&u.DestDirFieldName) {
 					return d.ArgErr()
 				}
+			case "pass_thru":
+				var passThruStr string
+				if !d.AllArgs(&passThruStr) {
+					return d.ArgErr()
+				}
+				passThruBool, err := strconv.ParseBool(passThruStr)
+				if err != nil {
+					return d.Errf("parsing pass_thru: %v", err)
+				}
+				u.PassThru = passThruBool
 			default:
 				return d.Errf("unrecognized servers option '%s'", d.Val())
 			}
