@@ -26,7 +26,7 @@ spec:
       containers:
         - name: caddy-upload
           # TODO: Adopt to your image if wished
-          image: me2digital/caddyv2-upload:latest
+          image: docker.io/me2digital/caddyv2-upload:latest
           imagePullPolicy: Always
           securityContext:
             allowPrivilegeEscalation: false
