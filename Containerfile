@@ -1,9 +1,10 @@
 FROM ubuntu:latest
 
-ENV XCADDY_VERSION=0.4.2 \
-    GOLANG_VERSION=22.3 \
+# https://go.dev/dl/go1.26.0.linux-amd64.tar.gz
+ENV XCADDY_VERSION=0.4.5 \
+    GOLANG_VERSION=26.0 \
     APPPORT=:2011 \
-    UPLOADER_VERSION=0.17
+    UPLOADER_VERSION=0.20.0
 
 COPY docker-files /
 

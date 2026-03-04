@@ -1,6 +1,7 @@
 package upload
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,7 +17,7 @@ import (
 )
 
 const (
-	Version = "0.17"
+	Version = "0.20.0"
 )
 
 func init() {
@@ -203,30 +204,44 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 
 	r.Body = http.MaxBytesReader(w, r.Body, u.MaxFilesize)
 	if max_size_err := r.ParseMultipartForm(u.MaxFormBuffer); max_size_err != nil {
+		statusCode := http.StatusBadRequest
+		message := "The uploaded form data is invalid."
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(max_size_err, &maxBytesErr) {
+			statusCode = http.StatusRequestEntityTooLarge
+			message = "The uploaded file is too big. Please choose a file below MaxFilesize."
+		}
 		u.logger.Error("ServeHTTP",
 			zap.String("requuid", requuid),
-			zap.String("message", "The uploaded file is too big. Please choose an file that's less than MaxFilesize."),
+			zap.String("message", message),
 			zap.String("MaxFilesize", humanize.Bytes(uint64(u.MaxFilesize))),
 			zap.Error(max_size_err),
 			zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
-		return caddyhttp.Error(http.StatusRequestEntityTooLarge, max_size_err)
+		return caddyhttp.Error(statusCode, max_size_err)
 	}
 
 	// cleanup uploaded files see
 	// https://github.com/git001/caddyv2-upload/issues/13
-	defer r.MultipartForm.RemoveAll()
+	if r.MultipartForm != nil {
+		defer r.MultipartForm.RemoveAll()
+	}
 
 	// FormFile returns the first file for the given file field key
 	// it also returns the FileHeader so we can get the Filename,
 	// the Header and the size of the file
 	file, handler, ff_err := r.FormFile(u.FileFieldName)
 	if ff_err != nil {
+		message := "Error retrieving the file from form data."
+		statusCode := http.StatusBadRequest
+		if errors.Is(ff_err, http.ErrMissingFile) {
+			message = "Missing file in multipart form."
+		}
 		u.logger.Error("FormFile Error",
 			zap.String("requuid", requuid),
-			zap.String("message", "Error Retrieving the File"),
+			zap.String("message", message),
 			zap.Error(ff_err),
 			zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
-		return caddyhttp.Error(http.StatusInternalServerError, ff_err)
+		return caddyhttp.Error(statusCode, ff_err)
 	}
 	defer file.Close()
 
@@ -281,7 +296,7 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 		filename = u.FixedFileName
 	}
 
-	tempFile, tmpf_err := os.OpenFile(caddyhttp.SanitizedPathJoin(concatDir, filename), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	tempFile, tmpf_err := os.OpenFile(caddyhttp.SanitizedPathJoin(concatDir, filename), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 
 	if tmpf_err != nil {
 		u.logger.Error("TempFile Error",

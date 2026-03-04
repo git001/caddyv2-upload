@@ -85,8 +85,8 @@ func (u *Upload) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return d.ArgErr()
 				}
 			case "insecure":
-				if !d.NextArg() {
-					return d.ArgErr()
+				if d.NextArg() {
+					return d.Err("insecure is a flag and does not take a value")
 				}
 				u.MyTlsSetting.InsecureSkipVerify = true
 			case "capath":

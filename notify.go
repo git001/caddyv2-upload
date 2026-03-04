@@ -1,7 +1,9 @@
 package upload
 
 import (
+	"crypto/tls"
 	"crypto/x509"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -13,7 +15,7 @@ import (
 
 func (u Upload) SendNotify(requuid string) error {
 
-	url, urlError := url.Parse(u.NotifyURL)
+	notifyURL, urlError := url.Parse(u.NotifyURL)
 
 	if urlError != nil {
 		u.logger.Error("Read caCert error",
@@ -33,19 +35,22 @@ func (u Upload) SendNotify(requuid string) error {
 	t.IdleConnTimeout = 30 * time.Second
 
 	if u.MyTlsSetting.InsecureSkipVerify {
-		if url.Scheme != "https" {
+		if notifyURL.Scheme != "https" {
 			u.logger.Error("check Schema insecure",
 				zap.String("requuid", requuid),
 				zap.Bool("insecure", u.MyTlsSetting.InsecureSkipVerify),
 			)
 			return errors.New("Parameter 'insecure' makes no sense without Scheme https")
 		}
+		if t.TLSClientConfig == nil {
+			t.TLSClientConfig = &tls.Config{}
+		}
 		t.TLSClientConfig.InsecureSkipVerify = true
 	}
 
 	if u.MyTlsSetting.CAPath != "" {
 
-		if url.Scheme != "https" {
+		if notifyURL.Scheme != "https" {
 			u.logger.Error("check Schema capath",
 				zap.String("requuid", requuid),
 				zap.String("capath", u.MyTlsSetting.CAPath),
@@ -71,6 +76,9 @@ func (u Upload) SendNotify(requuid string) error {
 			)
 			return errors.New("failed to parse ca certificate as PEM encoded content")
 		}
+		if t.TLSClientConfig == nil {
+			t.TLSClientConfig = &tls.Config{}
+		}
 		t.TLSClientConfig.RootCAs = caCertPool
 	}
 
@@ -80,7 +88,7 @@ func (u Upload) SendNotify(requuid string) error {
 	}
 
 	// TODO: Handle notify Body
-	myRequest, reqerror := http.NewRequestWithContext(u.ctx, u.NotifyMethod, url.String(), nil)
+	myRequest, reqerror := http.NewRequestWithContext(u.ctx, u.NotifyMethod, notifyURL.String(), nil)
 
 	if reqerror != nil {
 		u.logger.Error("httpClient build Request error",
@@ -93,16 +101,18 @@ func (u Upload) SendNotify(requuid string) error {
 
 	myRequest.Header.Set("User-Agent", "MyUpload-Handler_v"+Version)
 
-	myResp, error := httpClient.Do(myRequest)
-	if error != nil {
+	myResp, reqDoErr := httpClient.Do(myRequest)
+	if reqDoErr != nil {
 		u.logger.Error("httpClient Request error",
 			zap.String("requuid", requuid),
 			zap.Any("Request", myRequest),
 			zap.Any("Response", myResp),
-			zap.Error(error),
+			zap.Error(reqDoErr),
 		)
-		return errors.Wrapf(error, "httpClient Request error")
+		return errors.Wrapf(reqDoErr, "httpClient Request error")
 	}
+	defer myResp.Body.Close()
+	_, _ = io.Copy(io.Discard, myResp.Body)
 
 	u.logger.Debug("Notify Info",
 		zap.Any("Request", myRequest),
