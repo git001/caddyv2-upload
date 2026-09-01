@@ -1,8 +1,8 @@
 FROM ubuntu:latest
 
-# https://go.dev/dl/go1.26.0.linux-amd64.tar.gz
+# https://go.dev/dl/go1.27.0.linux-amd64.tar.gz
 ENV XCADDY_VERSION=0.4.5 \
-    GOLANG_VERSION=26.0 \
+    GOLANG_VERSION=27.0 \
     APPPORT=:2011 \
     UPLOADER_VERSION=0.20.0
 
