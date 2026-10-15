@@ -3,10 +3,12 @@ FROM ubuntu:latest
 # https://go.dev/dl/go1.27.0.linux-amd64.tar.gz
 ENV XCADDY_VERSION=0.4.5 \
     GOLANG_VERSION=27.0 \
-    APPPORT=:2011 \
-    UPLOADER_VERSION=0.25.0
+    CADDY_VERSION=2.11.7 \
+    APPPORT=:2011
 
 COPY docker-files /
+# Build the plugin from the checked out source, not from the Go module proxy
+COPY go.mod go.sum *.go /src/caddyv2-upload/
 
 RUN set -x \
   && apt-get -y update \
@@ -19,8 +21,9 @@ RUN set -x \
   && tar -C /usr/local --no-overwrite-dir --no-same-owner --no-same-permissions -xzf go1.${GOLANG_VERSION}.linux-amd64.tar.gz \
   && export PATH=$PATH:/usr/local/go/bin \
   && tar xfvz xcaddy_${XCADDY_VERSION}_linux_amd64.tar.gz \
-  && ./xcaddy build --with github.com/kirsch33/realip \
-    --with github.com/git001/caddyv2-upload \
+  && ./xcaddy build v${CADDY_VERSION} \
+    --with github.com/kirsch33/realip \
+    --with github.com/git001/caddyv2-upload=/src/caddyv2-upload \
     --with github.com/caddyserver/jsonc-adapter \
   && pwd \
   && mv caddy /usr/local/bin/ \
@@ -29,9 +32,10 @@ RUN set -x \
   && chmod -R g=u /opt/webroot/ /opt/caddy/ \
   && apt-get -y autoremove \
   && apt-get -y autoclean \
-  && rm -rf build /usr/local/go /var/cache/apk/* root/.cache root/go/ \
+  && rm -rf build /src /usr/local/go /var/cache/apk/* root/.cache root/go/ \
   && /usr/local/bin/caddy list-modules \
-  && /usr/local/bin/caddy version
+  && /usr/local/bin/caddy version \
+  && /usr/local/bin/caddy build-info | grep caddyv2-upload
 
 WORKDIR /opt/webroot/
 
