@@ -97,13 +97,13 @@ The default size is **1G**.
 |This is the Parameter where you can define the CA filename for the **notify_url**.
 
 |**create_uuid_dir**
-|If set to `true`, each file will get a unique directory with a UUID as its name.
+|If set to `true`, each file will get a unique directory with a UUID as its name. The value is optional and defaults to `false`; `create_uuid_dir` alone is the same as `create_uuid_dir true`.
 
 |**dest_dir_field_name**
 |If set, the dest_dir will be set from the specified form value.
 
 |**pass_thru**
-|If set to `true`, enables pass-thru mode, which continues to the next HTTP handler in the route instead of responding directly.
+|If set to `true`, enables pass-thru mode, which continues to the next HTTP handler in the route instead of responding directly. The value is optional and defaults to `false`.
 
 |===
 

@@ -94,13 +94,9 @@ func (u *Upload) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return d.ArgErr()
 				}
 			case "create_uuid_dir":
-				var uuidDirStr string
-				if !d.AllArgs(&uuidDirStr) {
-					return d.ArgErr()
-				}
-				uuidDirBool, err := strconv.ParseBool(uuidDirStr)
+				uuidDirBool, err := parseOptionalBool(d, "create_uuid_dir")
 				if err != nil {
-					return d.Errf("parsing create_uuid_dir: %v", err)
+					return err
 				}
 				u.CreateUuidDir = uuidDirBool
 			case "dest_dir_field_name":
@@ -108,13 +104,9 @@ func (u *Upload) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return d.ArgErr()
 				}
 			case "pass_thru":
-				var passThruStr string
-				if !d.AllArgs(&passThruStr) {
-					return d.ArgErr()
-				}
-				passThruBool, err := strconv.ParseBool(passThruStr)
+				passThruBool, err := parseOptionalBool(d, "pass_thru")
 				if err != nil {
-					return d.Errf("parsing pass_thru: %v", err)
+					return err
 				}
 				u.PassThru = passThruBool
 			default:
@@ -125,17 +117,42 @@ func (u *Upload) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	return nil
 }
 
+// parseOptionalBool parses a flag-style option. Without an argument the
+// option is enabled; an optional single argument may be true or false.
+func parseOptionalBool(d *caddyfile.Dispenser, name string) (bool, error) {
+	if !d.NextArg() {
+		return true, nil
+	}
+	b, err := strconv.ParseBool(d.Val())
+	if err != nil {
+		return false, d.Errf("parsing %s: %v", name, err)
+	}
+	if d.NextArg() {
+		return false, d.ArgErr()
+	}
+	return b, nil
+}
+
 // parseCaddyfile parses the upload directive. It enables the upload
 // of a file:
 //
 //	upload {
 //		capath				<CA Path>
-//		create_uuid_dir		true | false
+//		create_uuid_dir		[true | false]
 //		dest_dir			<destination directory>
+//		dest_dir_field_name	<form field name>
+//		file_field_name		<form field name>
+//		fixed_file_name		<file name>
 //		insecure
 //		max_filesize		<Humanized size>
 //		max_filesize_int	<size>
+//		max_form_buffer		<Humanized size>
+//		max_form_buffer_int	<size>
+//		notify_method		<method>
+//		notify_url			<URL>
+//		pass_thru			[true | false]
 //		response_template	[<path to a response template>]
+//		root_dir			<root directory>
 //	}
 func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
 	var u Upload
