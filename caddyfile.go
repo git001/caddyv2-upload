@@ -109,6 +109,16 @@ func (u *Upload) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return err
 				}
 				u.PassThru = passThruBool
+			case "allowed_extensions":
+				u.AllowedExtensions = d.RemainingArgs()
+				if len(u.AllowedExtensions) == 0 {
+					return d.ArgErr()
+				}
+			case "allowed_mime_types":
+				u.AllowedMimeTypes = d.RemainingArgs()
+				if len(u.AllowedMimeTypes) == 0 {
+					return d.ArgErr()
+				}
 			default:
 				return d.Errf("unrecognized servers option '%s'", d.Val())
 			}
@@ -137,6 +147,8 @@ func parseOptionalBool(d *caddyfile.Dispenser, name string) (bool, error) {
 // of a file:
 //
 //	upload {
+//		allowed_extensions	<ext> [<ext>...]
+//		allowed_mime_types	<mime type> [<mime type>...]
 //		capath				<CA Path>
 //		create_uuid_dir		[true | false]
 //		dest_dir			<destination directory>

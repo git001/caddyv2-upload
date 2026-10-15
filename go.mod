@@ -5,6 +5,7 @@ go 1.27.0
 require (
 	github.com/caddyserver/caddy/v2 v2.11.4
 	github.com/dustin/go-humanize v1.0.1
+	github.com/gabriel-vasile/mimetype v1.4.15
 	github.com/google/uuid v1.6.0
 	github.com/pkg/errors v0.9.1
 	go.uber.org/zap v1.28.0

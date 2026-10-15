@@ -4,14 +4,19 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"os"
+	"path/filepath"
+	"slices"
+	"strings"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/dustin/go-humanize"
+	"github.com/gabriel-vasile/mimetype"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -42,6 +47,9 @@ type Upload struct {
 	CreateUuidDir    bool   `json:"create_uuid_dir,omitempty"`
 	DestDirFieldName string `json:"dest_dir_field_name,omitempty"`
 	PassThru         bool   `json:"pass_thru,omitempty"`
+
+	AllowedExtensions []string `json:"allowed_extensions,omitempty"`
+	AllowedMimeTypes  []string `json:"allowed_mime_types,omitempty"`
 
 	MyTlsSetting struct {
 		InsecureSkipVerify bool   `json:"insecure,omitempty"`
@@ -159,6 +167,18 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 		}
 	}
 
+	for i, ext := range u.AllowedExtensions {
+		ext = strings.ToLower(ext)
+		if !strings.HasPrefix(ext, ".") {
+			ext = "." + ext
+		}
+		u.AllowedExtensions[i] = ext
+	}
+
+	for i, mt := range u.AllowedMimeTypes {
+		u.AllowedMimeTypes[i] = strings.ToLower(mt)
+	}
+
 	u.logger.Info("Current Config",
 		zap.String("Version", Version),
 		zap.String("dest_dir", u.DestDir),
@@ -176,6 +196,8 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 		zap.Bool("insecure", u.MyTlsSetting.InsecureSkipVerify),
 		zap.String("dest_dir_field_name", u.DestDirFieldName),
 		zap.Bool("pass_thru", u.PassThru),
+		zap.Strings("allowed_extensions", u.AllowedExtensions),
+		zap.Strings("allowed_mime_types", u.AllowedMimeTypes),
 	)
 
 	return nil
@@ -244,6 +266,44 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 		return caddyhttp.Error(statusCode, ff_err)
 	}
 	defer file.Close()
+
+	if len(u.AllowedExtensions) > 0 {
+		ext := strings.ToLower(filepath.Ext(handler.Filename))
+		if !slices.Contains(u.AllowedExtensions, ext) {
+			u.logger.Error("File extension not allowed",
+				zap.String("requuid", requuid),
+				zap.String("filename", handler.Filename),
+				zap.Strings("allowed_extensions", u.AllowedExtensions),
+				zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
+			return caddyhttp.Error(http.StatusUnsupportedMediaType,
+				fmt.Errorf("file extension %q not allowed", ext))
+		}
+	}
+
+	if len(u.AllowedMimeTypes) > 0 {
+		mtype, err := mimetype.DetectReader(file)
+		if err != nil {
+			u.logger.Error("MIME type detection error",
+				zap.String("requuid", requuid),
+				zap.Error(err),
+				zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
+			return caddyhttp.Error(http.StatusInternalServerError, err)
+		}
+		if !mimeAllowed(mtype, u.AllowedMimeTypes) {
+			u.logger.Error("MIME type not allowed",
+				zap.String("requuid", requuid),
+				zap.String("filename", handler.Filename),
+				zap.String("detected_mime_type", mtype.String()),
+				zap.Strings("allowed_mime_types", u.AllowedMimeTypes),
+				zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
+			return caddyhttp.Error(http.StatusUnsupportedMediaType,
+				fmt.Errorf("mime type %q not allowed", mtype.String()))
+		}
+		// DetectReader consumed the beginning of the file
+		if _, err := file.Seek(0, io.SeekStart); err != nil {
+			return caddyhttp.Error(http.StatusInternalServerError, err)
+		}
+	}
 
 	if u.RootDir == "" {
 		var rootDirErr bool
@@ -387,3 +447,23 @@ var (
 	_ caddyhttp.MiddlewareHandler = (*Upload)(nil)
 	_ caddyfile.Unmarshaler       = (*Upload)(nil)
 )
+
+// mimeAllowed reports whether mtype or one of its parents matches an
+// allowed entry. Entries may use a wildcard subtype like "image/*".
+func mimeAllowed(mtype *mimetype.MIME, allowed []string) bool {
+	for m := mtype; m != nil; m = m.Parent() {
+		base, _, err := mime.ParseMediaType(m.String())
+		if err != nil {
+			continue
+		}
+		for _, a := range allowed {
+			if a == base {
+				return true
+			}
+			if prefix, ok := strings.CutSuffix(a, "/*"); ok && strings.HasPrefix(base, prefix+"/") {
+				return true
+			}
+		}
+	}
+	return false
+}

@@ -105,6 +105,20 @@ The default size is **1G**.
 |**pass_thru**
 |If set to `true`, enables pass-thru mode, which continues to the next HTTP handler in the route instead of responding directly. The value is optional and defaults to `false`.
 
+|**allowed_extensions**
+|List of allowed file extensions, e.g. `.jpg .png .pdf`. The check is case-insensitive and the leading dot is optional.
+  Only the last extension of the file name sent by the client is checked (`report.tar.gz` -> `.gz`), also when `fixed_file_name` is set.
+  Uploads with other extensions are rejected with HTTP status 415. +
+  *Note:* the extension is chosen by the client and is easy to fake. Use `allowed_mime_types` to check the real content.
+
+|**allowed_mime_types**
+|List of allowed MIME types, e.g. `image/* application/pdf`. A wildcard subtype like `image/*` is supported.
+  The type is detected from the file content with https://github.com/gabriel-vasile/mimetype[mimetype], the `Content-Type` sent by the client is ignored.
+  Uploads with other types are rejected with HTTP status 415. +
+  Parent types are matched too, see the https://github.com/gabriel-vasile/mimetype/blob/master/supported_mimes.md[supported MIME types and their hierarchy].
+  For example `application/zip` also allows docx, xlsx and jar files, and `text/plain` also allows HTML, CSV and JSON files. +
+  *Warning:* allowing `text/plain` also allows HTML. If the upload directory is served by a web server this can lead to XSS.
+
 |===
 
 === Caddy Variables
