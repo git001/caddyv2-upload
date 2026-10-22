@@ -6,26 +6,37 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  XCADDY_VERSION: 0.4.7
+  CADDY_VERSION: 2.11.7
+
 jobs:
 
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v7
 
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v7
       with:
-        go-version: 1.27.0
+        go-version-file: go.mod
+
+    - name: Vet
+      run: go vet ./...
+
+    - name: Test
+      run: go test ./...
 
     - name: Download xcaddy
-      run: curl -vLO https://github.com/caddyserver/xcaddy/releases/download/v0.4.5/xcaddy_0.4.5_linux_amd64.tar.gz
+      run: curl -vLO https://github.com/caddyserver/xcaddy/releases/download/v${XCADDY_VERSION}/xcaddy_${XCADDY_VERSION}_linux_amd64.tar.gz
 
     - name: Extract xcaddy
-      run: tar xfvz xcaddy_0.4.5_linux_amd64.tar.gz
+      run: tar xfvz xcaddy_${XCADDY_VERSION}_linux_amd64.tar.gz
 
+    # Build the checked out source, not the latest version from the Go module proxy
     - name: Build
-      run: ./xcaddy build --with github.com/kirsch33/realip --with github.com/git001/caddyv2-upload
+      run: ./xcaddy build v${CADDY_VERSION} --with github.com/kirsch33/realip --with github.com/git001/caddyv2-upload=.
 
     - name: Show caddy modules
       run: ./caddy list-modules

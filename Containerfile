@@ -1,7 +1,7 @@
 FROM ubuntu:latest
 
 # https://go.dev/dl/go1.27.0.linux-amd64.tar.gz
-ENV XCADDY_VERSION=0.4.5 \
+ENV XCADDY_VERSION=0.4.7 \
     GOLANG_VERSION=27.0 \
     CADDY_VERSION=2.11.7 \
     APPPORT=:2011
