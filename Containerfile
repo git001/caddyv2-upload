@@ -23,6 +23,7 @@ RUN set -x \
   && tar xfvz xcaddy_${XCADDY_VERSION}_linux_amd64.tar.gz \
   && ./xcaddy build v${CADDY_VERSION} \
     --with github.com/kirsch33/realip \
+    --with github.com/mholt/caddy-events-exec \
     --with github.com/git001/caddyv2-upload=/src/caddyv2-upload \
   && pwd \
   && mv caddy /usr/local/bin/ \

@@ -119,6 +119,13 @@ func (u *Upload) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				if len(u.AllowedMimeTypes) == 0 {
 					return d.ArgErr()
 				}
+			case "on_abort":
+				if !d.Args(&u.OnAbort) {
+					return d.ArgErr()
+				}
+				if u.OnAbort != "ignore" && u.OnAbort != "abort" {
+					return d.Errf("on_abort must be 'ignore' or 'abort', got '%s'", u.OnAbort)
+				}
 			default:
 				return d.Errf("unrecognized servers option '%s'", d.Val())
 			}
@@ -162,6 +169,7 @@ func parseOptionalBool(d *caddyfile.Dispenser, name string) (bool, error) {
 //		max_form_buffer_int	<size>
 //		notify_method		<method>
 //		notify_url			<URL>
+//		on_abort			ignore | abort
 //		pass_thru			[true | false]
 //		response_template	[<path to a response template>]
 //		root_dir			<root directory>

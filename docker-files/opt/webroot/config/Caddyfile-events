@@ -1,0 +1,24 @@
+{
+	order upload before file_server
+	events {
+		on upload_finished exec /opt/webroot/scripts/on-upload.sh {event.data.filepath} {event.data.filesize} {event.data.filename} {event.data.directory} {event.data.uuiddir} {event.data.requuid} {event.id} {event.name} {event.time} {event.time_unix} {event.module}
+	}
+	log {
+		level DEBUG
+	}
+}
+
+{$APPPORT} {
+	root .
+
+	file_server browse
+	templates
+
+	@mypost method POST
+	upload @mypost {
+		dest_dir tmp-upl
+		create_uuid_dir
+		max_filesize 4MB
+		response_template templates/upload-resp-template.txt
+	}
+}

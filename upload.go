@@ -1,6 +1,7 @@
 package upload
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -14,6 +15,7 @@ import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
+	"github.com/caddyserver/caddy/v2/modules/caddyevents"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/dustin/go-humanize"
 	"github.com/gabriel-vasile/mimetype"
@@ -51,6 +53,10 @@ type Upload struct {
 	AllowedExtensions []string `json:"allowed_extensions,omitempty"`
 	AllowedMimeTypes  []string `json:"allowed_mime_types,omitempty"`
 
+	// What to do when a handler aborts the upload_finished event:
+	// "ignore" (default) or "abort" (delete the file and respond with 422)
+	OnAbort string `json:"on_abort,omitempty"`
+
 	MyTlsSetting struct {
 		InsecureSkipVerify bool   `json:"insecure,omitempty"`
 		CAPath             string `json:"capath,omitempty"`
@@ -60,6 +66,7 @@ type Upload struct {
 
 	ctx    caddy.Context
 	logger *zap.Logger
+	events *caddyevents.App
 }
 
 // CaddyModule returns the Caddy module information.
@@ -74,6 +81,20 @@ func (Upload) CaddyModule() caddy.ModuleInfo {
 func (u *Upload) Provision(ctx caddy.Context) error {
 	u.ctx = ctx
 	u.logger = ctx.Logger(u)
+
+	eventsAppIface, err := ctx.App("events")
+	if err != nil {
+		return fmt.Errorf("getting events app: %v", err)
+	}
+	u.events = eventsAppIface.(*caddyevents.App)
+
+	switch u.OnAbort {
+	case "":
+		u.OnAbort = "ignore"
+	case "ignore", "abort":
+	default:
+		return fmt.Errorf("on_abort must be 'ignore' or 'abort', got '%s'", u.OnAbort)
+	}
 
 	repl := caddy.NewReplacer()
 
@@ -198,6 +219,7 @@ func (u *Upload) Provision(ctx caddy.Context) error {
 		zap.Bool("pass_thru", u.PassThru),
 		zap.Strings("allowed_extensions", u.AllowedExtensions),
 		zap.Strings("allowed_mime_types", u.AllowedMimeTypes),
+		zap.String("on_abort", u.OnAbort),
 	)
 
 	return nil
@@ -324,8 +346,9 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 
 	concatDir := caddyhttp.SanitizedPathJoin(u.RootDir, u.DestDir)
 
+	var uuidDir string
 	if u.CreateUuidDir {
-		uuidDir := uuid.New().String()
+		uuidDir = uuid.New().String()
 
 		// It's very unlikely that the uuidDir already exists, but just in case
 		for {
@@ -356,7 +379,9 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 		filename = u.FixedFileName
 	}
 
-	tempFile, tmpf_err := os.OpenFile(caddyhttp.SanitizedPathJoin(concatDir, filename), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	filePath := caddyhttp.SanitizedPathJoin(concatDir, filename)
+
+	tempFile, tmpf_err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 
 	if tmpf_err != nil {
 		u.logger.Error("TempFile Error",
@@ -380,6 +405,16 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 		return caddyhttp.Error(http.StatusInternalServerError, io_err)
 	}
 
+	// close the file before event handlers get a chance to read it
+	if err := tempFile.Close(); err != nil {
+		u.logger.Error("Close Error",
+			zap.String("requuid", requuid),
+			zap.String("message", "Error at tempFile.Close"),
+			zap.Error(err),
+			zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
+		return caddyhttp.Error(http.StatusInternalServerError, err)
+	}
+
 	u.logger.Info("Successful Upload Info",
 		zap.String("requuid", requuid),
 		zap.String("Uploaded File", filename),
@@ -388,6 +423,39 @@ func (u Upload) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 		zap.String("UploadDir", concatDir),
 		zap.Any("MIME Header", handler.Header),
 		zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
+
+	// use the module context, not the request context: handlers running
+	// in the background must not be canceled when the response is sent.
+	// Drop the cancelation of the module context too, so that they also
+	// survive config reloads; they still have their own timeout.
+	evtCtx := u.ctx
+	evtCtx.Context = context.WithoutCancel(u.ctx.Context)
+	evt := u.events.Emit(evtCtx, "upload_finished", map[string]any{
+		"filename":  filename,
+		"filesize":  handler.Size,
+		"directory": concatDir,
+		"filepath":  filePath,
+		"uuiddir":   uuidDir,
+		"requuid":   requuid,
+	})
+	if evt.Aborted != nil && u.OnAbort == "abort" {
+		removePath := filePath
+		if uuidDir != "" {
+			removePath = concatDir
+		}
+		if err := os.RemoveAll(removePath); err != nil {
+			u.logger.Error("Remove Error",
+				zap.String("requuid", requuid),
+				zap.String("message", "Failed to remove "+removePath),
+				zap.Error(err))
+		}
+		u.logger.Error("Upload aborted by event handler",
+			zap.String("requuid", requuid),
+			zap.String("filepath", filePath),
+			zap.Error(evt.Aborted),
+			zap.Object("request", caddyhttp.LoggableHTTPRequest{Request: r}))
+		return caddyhttp.Error(http.StatusUnprocessableEntity, evt.Aborted)
+	}
 
 	repl.Set("http.upload.filename", filename)
 	repl.Set("http.upload.filesize", handler.Size)

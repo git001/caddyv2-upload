@@ -118,6 +118,11 @@ The default size is **1G**.
   For example `application/zip` also allows docx, xlsx and jar files, and `text/plain` also allows HTML, CSV and JSON files. +
   *Warning:* allowing `text/plain` also allows HTML. If the upload directory is served by a web server this can lead to XSS.
 
+|**on_abort**
+|What to do when an event handler aborts the `upload_finished` event, see <<Events>>.
+  `ignore` (default) keeps the file and responds as usual.
+  `abort` deletes the file (with `create_uuid_dir` the whole UUID directory) and responds with HTTP status 422.
+
 |===
 
 === Caddy Variables
@@ -204,6 +209,142 @@ Here a example Caddyfile which expects that the environment variable
 	}
 }
 ----
+
+=== Events
+
+After a file was written successfully the upload handler emits the
+Caddy event `upload_finished` via the built-in
+https://caddyserver.com/docs/modules/events[events app].
+Subscribed event handlers can use the following placeholders.
+
+.event data
+[cols="2,6",options=header]
+|===
+|Name
+|Description
+
+|**{event.data.filename}**
+|The file name (sent by the client, or `fixed_file_name`)
+
+|**{event.data.filesize}**
+|The file size in bytes
+
+|**{event.data.directory}**
+|The directory where the file is stored
+
+|**{event.data.filepath}**
+|The path of the stored file (`directory` + `filename`). It is relative when `root`/`root_dir` is relative.
+
+|**{event.data.uuiddir}**
+|The name of the UUID directory, empty without `create_uuid_dir`
+
+|**{event.data.requuid}**
+|The `http.request.uuid` of the upload request
+|===
+
+The container image contains the https://github.com/mholt/caddy-events-exec[events.handlers.exec]
+module (experimental) to run a program for an event.
+`docker-files/opt/webroot/config/Caddyfile-events` is a working demo
+which runs `docker-files/opt/webroot/scripts/on-upload.sh` after every upload.
+
+[source]
+----
+{
+	order upload before file_server
+	events {
+		on upload_finished exec /opt/webroot/scripts/on-upload.sh {event.data.filepath} {event.data.filesize} {event.data.filename} {event.data.directory} {event.data.uuiddir} {event.data.requuid} {event.id} {event.name} {event.time} {event.time_unix} {event.module}
+	}
+}
+----
+
+By default `exec` runs the program in the background, the HTTP response does
+not wait for it and its exit code is ignored by the upload handler.
+Caddy logs `background command failed` when the program exits with a non-zero
+code or is killed after the timeout (default 30s), a successful run is not logged.
+The output of the program goes to the stdout/stderr of Caddy.
+
+NOTE: Programs running in the background survive config reloads, only the
+`exec` timeout ends them. Caddy does not wait for them when it exits, so a
+stop or restart of Caddy (or of its container) can end them in the middle of
+their work.
+
+==== Requirements for the called program
+
+The program runs once per upload, in parallel and without any limit on the
+number of running instances. It must be robust and short-lived:
+
+* *Finish fast.* Best is a small "write to queue" program, which only hands
+  over the file (e.g. moves it into a spool directory or pushes a job to a
+  message queue) and leaves long running tasks (scan, conversion, transfer to
+  other systems, ...) to a service outside of Caddy.
+* *Limit the runtime yourself.* When the `exec` timeout (default 30s) hits,
+  only the program itself is killed, *not the processes it started*. A shell
+  script killed this way leaves its running commands behind, they keep running
+  as orphans. Wrap slow commands with `timeout <seconds>` below the `exec`
+  timeout (as the demo script does), and use `exec <command>` for the last
+  command of a shell script.
+* *Don't start background processes* (`&`, `nohup`, ...), they escape the
+  `exec` timeout as well.
+* *Handle errors.* A failing background program is only logged by Caddy
+  (`background command failed`), nobody retries it. In the foreground, decide
+  whether an error rejects the upload (fail closed, like the demo script) or
+  not.
+* In a container, run Caddy with an init process (e.g. `podman run --init`,
+  `docker run --init` or `tini`), so that orphaned processes are reaped.
+
+==== Reject an upload from an event handler
+
+To reject an upload, e.g. after a virus scan, the program must run in the
+foreground with `abort_codes`, and the upload handler needs `on_abort abort`.
+The Caddyfile syntax of `exec` only supports the command and its arguments,
+so this needs the JSON config:
+
+[source,json]
+----
+"events": {
+	"subscriptions": [
+		{
+			"events": ["upload_finished"],
+			"handlers": [
+				{
+					"handler": "exec",
+					"command": "/opt/webroot/scripts/on-upload.sh",
+					"args": ["{event.data.filepath}", "{event.data.filesize}", "{event.data.filename}", "{event.data.directory}", "{event.data.uuiddir}", "{event.data.requuid}", "{event.id}", "{event.name}", "{event.time}", "{event.time_unix}", "{event.module}"],
+					"foreground": true,
+					"abort_codes": [3]
+				}
+			]
+		}
+	]
+}
+----
+
+The demo script exits with code 3 when the file contains the
+https://www.eicar.org/download-anti-malware-testfile/[EICAR test string].
+The upload then gets HTTP status 422 and the file is deleted.
+
+In the foreground the HTTP response waits for the program. During this time
+no data is sent to the client, so keep the runtime well below the smallest
+timeout between client and Caddy. Caddy itself has no write timeout by default,
+but reverse proxies and load balancers in front of it often have one, e.g.
+OpenShift routes 30s, nginx `proxy_read_timeout` 60s, Cloudflare 100s.
+If such a timeout hits, the client gets an error (e.g. 504) while Caddy
+continues: the file may be stored anyway, or a 422 never reaches the client.
+
+WARNING: When `exec` kills the program after its timeout (default 30s), the
+exit code is not one of the `abort_codes` and the event is *not* aborted:
+the upload is accepted. To fail closed, limit the runtime inside the program
+below the `exec` timeout and exit with an abort code when the limit is reached.
+The demo script does this with `timeout` and the environment variable
+`SCAN_TIMEOUT` (default 20s). `SCAN_DELAY` simulates a slow scan for testing.
+
+*Security notes:*
+
+* The file name is chosen by the client. Pass it only as a separate argument
+  and never into a shell like `sh -c "... {event.data.filename}"`, this
+  would allow command injection.
+* Prefer `{event.data.filepath}`: it starts with the upload directory and
+  can't be mistaken for an option of the program, unlike a file name such as `-rf`.
 
 == build
 
