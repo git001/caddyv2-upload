@@ -24,7 +24,6 @@ RUN set -x \
   && ./xcaddy build v${CADDY_VERSION} \
     --with github.com/kirsch33/realip \
     --with github.com/git001/caddyv2-upload=/src/caddyv2-upload \
-    --with github.com/caddyserver/jsonc-adapter \
   && pwd \
   && mv caddy /usr/local/bin/ \
   && cd .. \

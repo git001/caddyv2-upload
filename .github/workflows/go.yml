@@ -25,7 +25,7 @@ jobs:
       run: tar xfvz xcaddy_0.4.5_linux_amd64.tar.gz
 
     - name: Build
-      run: ./xcaddy build --with github.com/kirsch33/realip --with github.com/caddyserver/jsonc-adapter --with github.com/git001/caddyv2-upload
+      run: ./xcaddy build --with github.com/kirsch33/realip --with github.com/git001/caddyv2-upload
 
     - name: Show caddy modules
       run: ./caddy list-modules
