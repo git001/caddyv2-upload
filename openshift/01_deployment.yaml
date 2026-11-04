@@ -40,8 +40,6 @@ spec:
               value: /opt/
             - name: XDG_CONFIG_HOME
               value: /opt/
-            - name: SKIP_LOG
-              value: 'true'
           ports:
             - containerPort: 2011
               name: http

@@ -23,7 +23,7 @@
               "handle": [
                 {
                   "handler":"vars",
-                  "skip_log": "{env.SKIP_LOG}"
+                  "log_skip": true
                 },
                 {
                   "handler": "static_response",

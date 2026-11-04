@@ -29,9 +29,6 @@ IMPORTANT: The relative paths are relative to the current web root
 |**APPPORT**
 |The Port on which Caddyserver should listen. The format depends which Configuration file format you use. See the official Caddyserver documentation for the format https://caddyserver.com/docs/conventions#network-addresses[Network addresses]
 
-|**SKIP_LOG**
-|With this variable can you control if the health check will be logged or not. This feature was implemented as part of the vars handler.
-
 |===
 
 === Parameters
@@ -449,7 +446,9 @@ configmap/caddyfile-json created
 
 There is a builtin health handler with the path `/health` which just returns
 `200` and `Okay`.
-The log output can be controled via the environment variable `SKIP_LOG`.
+Requests to `/health` are not written to the access log: in the JSON example
+config the `vars` handler sets `"log_skip": true` (a JSON boolean, a string
+like `"true"` has no effect).
 
 == example cli
 
