@@ -5,6 +5,7 @@
   "apps": {
     "http": {
       "grace_period": "30m",
+      "metrics": {},
       "servers": {
         "example": {
           "listen": ["{env.APPPORT}"],
@@ -116,6 +117,24 @@
                   "handler": "upload",
                   "max_filesize": "{env.MAXFILESIZE}",
                   "response_template":"templates/upload-resp-template.txt"
+                }
+              ]
+            }
+          ]
+        },
+        "metrics": {
+          "listen": [":9180"],
+          "routes": [
+            {
+              "match": [
+                {
+                  "method": ["GET"],
+                  "path": ["/metrics"]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "metrics"
                 }
               ]
             }
