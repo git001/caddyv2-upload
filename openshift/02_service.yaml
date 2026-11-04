@@ -10,6 +10,10 @@ spec:
     port: 2011
     protocol: TCP
     targetPort: 2011
+  - name: metrics
+    port: 9180
+    protocol: TCP
+    targetPort: 9180
   selector:
     app: caddy-upload
   type: ClusterIP

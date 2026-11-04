@@ -1,0 +1,14 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: caddy-upload
+  labels:
+    app: caddy-upload
+spec:
+  selector:
+    matchLabels:
+      app: caddy-upload
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 60s

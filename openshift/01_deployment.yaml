@@ -26,7 +26,7 @@ spec:
       containers:
         - name: caddy-upload
           # TODO: Adopt to your image if wished
-          image: docker.io/me2digital/caddyv2-upload:latest
+          image: ghcr.io/git001/caddyv2-upload:latest
           imagePullPolicy: Always
           securityContext:
             allowPrivilegeEscalation: false
@@ -43,6 +43,9 @@ spec:
           ports:
             - containerPort: 2011
               name: http
+              protocol: TCP
+            - containerPort: 9180
+              name: metrics
               protocol: TCP
           readinessProbe:
             httpGet:
