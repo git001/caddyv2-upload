@@ -1,0 +1,96 @@
+# Default config of the container image (Caddyfile version of
+# Caddyfile-upload.json)
+#
+# Run: caddy run --adapter caddyfile --config config/Caddyfile-upload
+#
+# Environment variables ({$VAR} is replaced when the file is parsed):
+#   APPPORT          listen address of the upload server, e.g. :2011 (required)
+#   MAXFILESIZE      max. upload size, default 1GB
+#   TRUSTED_PROXIES  CIDR(s) of trusted proxies, separated by spaces,
+#                    default private_ranges (see servers below)
+{
+	admin 127.0.0.1:8081
+	grace_period 30m
+	metrics
+	order upload before file_server
+
+	log {
+		level INFO
+	}
+
+	# Take the client IP from X-Forwarded-For when the request comes from
+	# a trusted proxy (e.g. the OpenShift router). Set TRUSTED_PROXIES to
+	# the CIDR(s) of your proxies, separated by spaces; the default
+	# private_ranges trusts all private networks.
+	servers {
+		trusted_proxies static {$TRUSTED_PROXIES:private_ranges}
+		client_ip_headers X-Forwarded-For
+		trusted_proxies_strict
+	}
+}
+
+{$APPPORT} {
+	log myaccesslogger {
+		output stdout
+		format json
+	}
+
+	@health {
+		method GET
+		path /health
+	}
+	handle @health {
+		log_skip
+		respond "Okay" 200 {
+			close
+		}
+	}
+
+	@printHeaders {
+		method GET
+		path /print-headers-template.txt
+	}
+	handle @printHeaders {
+		templates
+		header Content-Type "text/plain; charset=utf-8"
+		file_server {
+			root templates
+		}
+	}
+
+	@uploadForm {
+		method GET
+		path /upload-template.html
+	}
+	handle @uploadForm {
+		templates
+		file_server {
+			root templates
+		}
+	}
+
+	@get method GET
+	handle @get {
+		templates
+		file_server browse
+	}
+
+	@post method POST
+	handle @post {
+		templates
+		header Content-Type "text/plain; charset=utf-8"
+		upload {
+			dest_dir upload
+			max_filesize {$MAXFILESIZE:1GB}
+			response_template templates/upload-resp-template.txt
+		}
+	}
+}
+
+:9180 {
+	@metrics {
+		method GET
+		path /metrics
+	}
+	metrics @metrics
+}

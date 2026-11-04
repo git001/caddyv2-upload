@@ -40,6 +40,12 @@ spec:
               value: /opt/
             - name: XDG_CONFIG_HOME
               value: /opt/
+            # Proxies whose X-Forwarded-For header is trusted (used by
+            # config/Caddyfile-upload). 10.0.0.0/8 is the private address
+            # range from RFC 1918, NOT a public range. Narrow it down to
+            # the network of your router / ingress if possible.
+            - name: TRUSTED_PROXIES
+              value: '10.0.0.0/8'
           ports:
             - containerPort: 2011
               name: http

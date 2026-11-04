@@ -39,4 +39,4 @@ RUN set -x \
 
 WORKDIR /opt/webroot/
 
-CMD ["/usr/local/bin/caddy","run","--config","config/Caddyfile-upload.json"]
+CMD ["/usr/local/bin/caddy","run","--adapter","caddyfile","--config","config/Caddyfile-upload"]

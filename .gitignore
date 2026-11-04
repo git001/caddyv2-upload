@@ -10,8 +10,9 @@
 *.userosscache
 *.sln.docstates
 
-*tmp-upl
-*upload
+# local upload directories (dest_dir tmp-upl / upload)
+tmp-upl/
+upload/
 
 # the binary creaded from xcaddy build
 caddy

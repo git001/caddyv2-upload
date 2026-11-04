@@ -175,6 +175,11 @@ A full working example is in
 
 === Caddyfile
 
+The container image starts with
+`docker-files/opt/webroot/config/Caddyfile-upload` (the Caddyfile version of
+`Caddyfile-upload.json`). It uses the environment variables `APPPORT`,
+`MAXFILESIZE` (default `1GB`) and `TRUSTED_PROXIES` (default `private_ranges`).
+
 Here a example Caddyfile which expects that the environment variable
 `APPPORT` is set.
 
@@ -366,28 +371,29 @@ docker build --tag caddyv2-upload .
 
 [source,shell]
 ----
+APPPORT=:2011 ./caddy run --adapter caddyfile \
+  --config docker-files/opt/webroot/config/Caddyfile-upload
+# or with the JSON config
 APPPORT=:2011 ./caddy run \
-  -config Caddyfile-upload.json 
+  --config docker-files/opt/webroot/config/Caddyfile-upload.json
 ----
 
 === docker
 
-You can get this image from docker hub
-
-The default listen port must be defined with this variable
-
-`APPPORT=:2011`
-
-https://hub.docker.com/r/me2digital/caddyv2-upload
+The image is published on the GitHub Container Registry as
+`ghcr.io/git001/caddyv2-upload`. It starts with `config/Caddyfile-upload`
+and listens on `APPPORT` (default `:2011`), the metrics on `:9180`.
 
 [source,shell]
 ----
-podman run --rm --network host --name caddy-test \
-  --env APPPORT=:8888 -it \
-  docker.io/me2digital/caddyv2-upload:latest
-# or 
-docker run --name caddy-test --rm \
-  docker.io/me2digital/caddyv2-upload:latest
+podman run --rm --name caddy-test \
+  -p 2011:2011 -p 9180:9180 \
+  ghcr.io/git001/caddyv2-upload:latest
+# start with the JSON config instead
+podman run --rm --name caddy-test \
+  -p 2011:2011 -p 9180:9180 \
+  ghcr.io/git001/caddyv2-upload:latest \
+  caddy run --config config/Caddyfile-upload.json
 ----
 
 === OpenShift / kubernetes
@@ -401,45 +407,50 @@ oc new-project caddyupload
 oc -n caddyupload apply -f openshift/
 ----
 
-To adopt the used Caddyfile then can you easily do this with a configmap.
-The commands below show the steps.
+To adopt the used Caddyfile then can you easily do this with a configmap
+which replaces `config/Caddyfile-upload` in the image.
+The key in the configmap (before the `=` of `--from-file`) must be the same
+as `--sub-path`.
 
 [source,shell]
 ----
-# add configure change trigger
-oc -n caddyupload \
-  set triggers \
-  deployment.apps/caddy-upload \
-  --from-config
-
 # create configmap
 oc -n caddyupload \
   create configmap \
-  caddyfile-json \
-  --from-file=Caddyfile-upload.json=<PATH_TO_LOCAL>/Caddyfile-upload.json
+  caddyfile \
+  --from-file=Caddyfile-upload=<PATH_TO_LOCAL>/Caddyfile-upload
 
 # add configmap to caddy deployment
 oc -n caddyupload \
   set volumes \
   deployment.apps/caddy-upload \
-  --add --configmap-name=caddyfile-json \
-  --mount-path=/opt/webroot/config/Caddyfile-upload.json \
-  --name=caddyfile-json \
-  --sub-path=Caddyfile-upload.json \
+  --add --configmap-name=caddyfile \
+  --mount-path=/opt/webroot/config/Caddyfile-upload \
+  --name=caddyfile \
+  --sub-path=Caddyfile-upload \
   --type=configmap
 ----
 
-In case the first shot of the configuration file does not work can you use the following
-commands to recreate the configuration file.
+To change the configuration later, replace the content of the configmap
+and restart the deployment. A file mounted with `subPath` is not updated in a
+running pod and Caddy reads it only at start.
 
 [source,shell]
 ----
-oc -n caddyupload-nis delete configmap caddyfile-json \
-&& oc -n caddyupload-nis create configmap caddyfile-json --from-file=Caddyfile-upload.json=<PATH_TO_LOCAL>/Caddyfile-upload.json
+oc -n caddyupload \
+  set data configmap/caddyfile \
+  --from-file=Caddyfile-upload=<PATH_TO_LOCAL>/Caddyfile-upload
+oc -n caddyupload rollout restart deployment/caddy-upload
+oc -n caddyupload rollout status deployment/caddy-upload
+----
 
-# output of the commands
-configmap "caddyfile-json" deleted
-configmap/caddyfile-json created
+To use the JSON config instead, mount it at
+`/opt/webroot/config/Caddyfile-upload.json` the same way and start Caddy with it:
+
+[source,shell]
+----
+oc -n caddyupload patch deployment/caddy-upload --type=json -p \
+  '[{"op":"add","path":"/spec/template/spec/containers/0/args","value":["caddy","run","--config","config/Caddyfile-upload.json"]}]'
 ----
 
 == Health probe
