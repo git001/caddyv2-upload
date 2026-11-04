@@ -38,6 +38,8 @@ spec:
               value: ':2011'
             - name: XDG_DATA_HOME
               value: /opt/
+            - name: XDG_CONFIG_HOME
+              value: /opt/
             - name: SKIP_LOG
               value: 'true'
           ports:

@@ -146,9 +146,11 @@
   "logging": {
     "logs": {
       "default": {
-        "level": "INFO"
+        "level": "INFO",
+        "exclude": ["http.log.access.myaccesslogger"]
       },
       "myaccesslogger": {
+        "include": ["http.log.access.myaccesslogger"],
         "writer": {
           "output": "stdout"
         },
