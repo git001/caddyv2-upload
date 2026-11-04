@@ -8,7 +8,7 @@ on:
 
 env:
   XCADDY_VERSION: 0.4.7
-  CADDY_VERSION: 2.11.7
+  CADDY_VERSION: 2.11.8
 
 jobs:
 
