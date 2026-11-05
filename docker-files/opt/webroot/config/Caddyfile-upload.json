@@ -7,32 +7,12 @@
       "grace_period": "30m",
       "metrics": {},
       "servers": {
-        "example": {
+        "upload": {
           "listen": ["{env.APPPORT}"],
           "logs": {
             "default_logger_name": "myaccesslogger"
           },
           "routes": [
-            {
-              "match":[
-                {
-                  "method": ["GET"],
-                  "path": ["/health"]
-                }
-              ],
-              "handle": [
-                {
-                  "handler":"vars",
-                  "log_skip": true
-                },
-                {
-                  "handler": "static_response",
-                  "status_code": 200,
-                  "body": "Okay",
-                  "close": true
-                }
-              ]
-            },
             {
               "match":[
                 {
@@ -117,6 +97,27 @@
                   "handler": "upload",
                   "max_filesize": "{env.MAXFILESIZE}",
                   "response_template":"templates/upload-resp-template.txt"
+                }
+              ]
+            }
+          ]
+        },
+        "health": {
+          "listen": [":9181"],
+          "routes": [
+            {
+              "match": [
+                {
+                  "method": ["GET"],
+                  "path": ["/health"]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "static_response",
+                  "status_code": 200,
+                  "body": "Okay",
+                  "close": true
                 }
               ]
             }

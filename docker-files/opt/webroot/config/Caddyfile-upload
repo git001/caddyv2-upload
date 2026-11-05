@@ -8,6 +8,11 @@
 #   MAXFILESIZE      max. upload size, default 1GB
 #   TRUSTED_PROXIES  CIDR(s) of trusted proxies, separated by spaces,
 #                    default private_ranges (see servers below)
+#
+# Servers (the name is the "server" label of the metrics):
+#   upload   {$APPPORT}  upload, file browser, templates
+#   metrics  :9180       GET /metrics
+#   health   :9181       GET /health, for liveness/readiness probes
 {
 	admin 127.0.0.1:8081
 	grace_period 30m
@@ -18,14 +23,24 @@
 		level INFO
 	}
 
+	# Caddy uses the first matching servers block per server, the
+	# blocks are not merged.
+	#
 	# Take the client IP from X-Forwarded-For when the request comes from
 	# a trusted proxy (e.g. the OpenShift router). Set TRUSTED_PROXIES to
 	# the CIDR(s) of your proxies, separated by spaces; the default
 	# private_ranges trusts all private networks.
-	servers {
+	servers {$APPPORT} {
+		name upload
 		trusted_proxies static {$TRUSTED_PROXIES:private_ranges}
 		client_ip_headers X-Forwarded-For
 		trusted_proxies_strict
+	}
+	servers :9180 {
+		name metrics
+	}
+	servers :9181 {
+		name health
 	}
 }
 
@@ -33,17 +48,6 @@
 	log myaccesslogger {
 		output stdout
 		format json
-	}
-
-	@health {
-		method GET
-		path /health
-	}
-	handle @health {
-		log_skip
-		respond "Okay" 200 {
-			close
-		}
 	}
 
 	@printHeaders {
@@ -93,4 +97,15 @@
 		path /metrics
 	}
 	metrics @metrics
+}
+
+# no access log for the probes
+:9181 {
+	@health {
+		method GET
+		path /health
+	}
+	respond @health "Okay" 200 {
+		close
+	}
 }

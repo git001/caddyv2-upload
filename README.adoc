@@ -382,7 +382,8 @@ APPPORT=:2011 ./caddy run \
 
 The image is published on the GitHub Container Registry as
 `ghcr.io/git001/caddyv2-upload`. It starts with `config/Caddyfile-upload`
-and listens on `APPPORT` (default `:2011`), the metrics on `:9180`.
+and listens on `APPPORT` (default `:2011`), the metrics on `:9180` and the
+health check on `:9181`.
 
 [source,shell]
 ----
@@ -455,11 +456,29 @@ oc -n caddyupload patch deployment/caddy-upload --type=json -p \
 
 == Health probe
 
-There is a builtin health handler with the path `/health` which just returns
-`200` and `Okay`.
-Requests to `/health` are not written to the access log: in the JSON example
-config the `vars` handler sets `"log_skip": true` (a JSON boolean, a string
-like `"true"` has no effect).
+The example configs run three servers. The name is the `server` label of the
+metrics, so the probes don't mix with the upload requests:
+
+[cols="1,1,4",options=header]
+|===
+|Server
+|Port
+|Purpose
+
+|`upload`
+|`APPPORT` (`:2011`)
+|upload, file browser, templates; access log
+
+|`metrics`
+|`:9180`
+|`GET /metrics` (Prometheus)
+
+|`health`
+|`:9181`
+|`GET /health` returns `200` and `Okay`, for liveness/readiness probes
+|===
+
+The `metrics` and `health` servers write no access log.
 
 == example cli
 
